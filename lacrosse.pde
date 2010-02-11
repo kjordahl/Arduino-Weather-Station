@@ -164,8 +164,8 @@ void loop(void)
 	  Serial.print("NaN");
 	}
       }
+      Serial.println("");
     }
-    Serial.println("");
     BitCount=0;
   }
 }
