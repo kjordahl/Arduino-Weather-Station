@@ -135,38 +135,37 @@ void loop(void)
 
   delay(1000);                  // wait for a second
   if ((BitCount) && (~echo)) {	// have a bit string that's ended
-/*     for (j=1; j<=BitCount; j++) { */
-/*       Serial.print(BitVal[j], DEC); */
-/*     } */
-    Serial.println("");
-    if ((nib(0)==0) && (nib(1)==0xE)) {
-	Serial.print("good data: T= ");
+    if (BitCount>16) {		/* skip packets < 2 bytes */
+      Serial.print("RAW: ");
+      for (j=0; j<(BitCount/4); j++) {
+	Serial.print(nib(j), HEX);
+      } 
+      Serial.println("");
+      if ((BitCount>29*4) && (nib(0)==0) && (nib(1)==0xE)) {
+	Serial.print("DATA: T= ");
 	tempC=(nib(26)*10-50 + nib(27) + ( (float) nib(28))/10);
 	tempF=tempC*9/5 + 32;
 	h=nib(15)*10+nib(16);
 	Serial.print(tempC,1);	/* print to 0.1 deg precision */
-	Serial.print(" deg C, ");
+	Serial.print(" degC, ");
 	Serial.print(tempF,1);	/* print to 0.1 deg precision */
-	Serial.print(" deg F, relative humidity ");
+	Serial.print(" degF, H= ");
 	Serial.print(h,DEC);
-	Serial.print("%   ");
+	Serial.print(" rawT ");
  	Serial.print(nib(26),HEX);
  	Serial.print(nib(27),HEX);
  	Serial.print(nib(28),HEX);
       } else {
-	Serial.print("garbled transmission?: ");
-	//	tempC=nib(27)*10+nib(28)+nib(29)/10-50;
-	//	Serial.println(tempC,DEC);
- 	Serial.print(nib(0),HEX);
- 	Serial.print(nib(1),HEX);
- 	Serial.print(" ");
- 	Serial.print(nib(26),HEX);
- 	Serial.print(nib(27),HEX);
- 	Serial.print(nib(28),HEX);
-/* 	tempC=(nib(26)*10+nib(27)+nib(28)/10)-50; */
-/* 	tempF=tempC*9/5 + 32; */
-/* 	Serial.println(tempF,DEC); */
+	Serial.print("garbled packet, T= ");
+	if (BitCount >=29*4) {
+	  tempC=(nib(26)*10-50 + nib(27) + ( (float) nib(28))/10);
+	  Serial.print(tempC,1);
+	} else {
+	  Serial.print("NaN");
+	}
+      }
     }
+    Serial.println("");
     BitCount=0;
   }
 }
