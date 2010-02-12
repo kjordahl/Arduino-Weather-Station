@@ -10,6 +10,8 @@
 // I reversed the red - did I flip the LED?
 #define RED_TESTLED_OFF()            ((PORTD &= ~(1<<PORTD7)))
 #define RED_TESTLED_ON()           ((PORTD |=  (1<<PORTD7)))
+
+#define BAUD_RATE 9600
 // 0.5 ms high is a one
 #define MIN_ONE 135		// minimum length of '1'
 #define MAX_ONE 155		// maximum length of '1'
@@ -18,7 +20,7 @@
 #define MAX_ZERO 370		// maximum length of '0'
 // 1 ms between bits
 #define MIN_WAIT 225		// minimum interval since end of last bit
-#define MAX_WAIT 275		// maximum interval since enf of last bit
+#define MAX_WAIT 275		// maximum interval since end of last bit
 
 unsigned int uiICP_CapturedTime;
 unsigned int uiICP_PreviousCapturedTime;
@@ -110,7 +112,7 @@ ISR( TIMER1_CAPT_vect )
 
 void setup(void)
 {
-  Serial.begin( 38400 );   //using the serial port at 38400bps for debugging and logging
+  Serial.begin( BAUD_RATE );   //using the serial port at 38400bps for debugging and logging
   Serial.println( "La Crosse weather station capture begin" );
   DDRB = 0x2F;   // B00101111
   DDRB  &= ~(1<<DDB0);    //PBO(ICP1) input
@@ -176,11 +178,5 @@ byte nib(byte bc) {
 byte tmp;
 
  tmp = ((BitVal[bc*4+1] << 3) + (BitVal[bc*4+2] << 2) + (BitVal[bc*4+3] << 1) + (BitVal[bc*4+4]));
-/*  Serial.print(BitVal[bc*4+1],DEC); */
-/*  Serial.print(BitVal[bc*4+2],DEC); */
-/*  Serial.print(BitVal[bc*4+3],DEC); */
-/*  Serial.println(BitVal[bc*4+4],DEC); */
-/*  Serial.println(tmp,BIN); */
-/*  Serial.println(tmp,HEX); */
  return tmp;
 }
