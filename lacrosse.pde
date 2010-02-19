@@ -1,6 +1,8 @@
 // test RF receiver
 // receive La Crosse sensor date
 
+#include <math.h>
+
 #define INPUT_CAPTURE_IS_RISING_EDGE()    ((TCCR1B & _BV(ICES1)) != 0)
 #define INPUT_CAPTURE_IS_FALLING_EDGE()   ((TCCR1B & _BV(ICES1)) == 0)
 #define SET_INPUT_CAPTURE_RISING_EDGE()   (TCCR1B |=  _BV(ICES1))
@@ -21,6 +23,16 @@
 // 1 ms between bits
 #define MIN_WAIT 225		// minimum interval since end of last bit
 #define MAX_WAIT 275		// maximum interval since end of last bit
+
+/* constants for extended Steinhart-Hart equation from thermistor datasheet */
+#define A 3.354016E-03
+#define B 2.569850E-04
+#define C 2.620131E-06
+#define D 6.383091E-08
+
+#define VCC 5.05		/* supply voltage on USB */
+#define LM61PIN 0		/* analog pin for LM61 */
+#define THERMPIN 1		/* analog pin for thermistor */
 
 unsigned int uiICP_CapturedTime;
 unsigned int uiICP_PreviousCapturedTime;
@@ -110,6 +122,22 @@ ISR( TIMER1_CAPT_vect )
   GREEN_TESTLED_OFF();
 }
 
+float Thermistor(int RawADC) {
+  float Temp;
+  Temp = log(((1024/float(RawADC)) - 1)); /* relative to 10 kOhm */
+  Temp = 1 / (A + (B * Temp) + (C * Temp * Temp) + (D * Temp * Temp * Temp));
+  Temp = Temp - 273.15;		/* convert to C */
+  // Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
+  return Temp;
+}
+
+float lm61(int RawADC) {
+  float Temp;
+  float voltage = RawADC * VCC / 1024; 
+  Temp = (voltage - 0.6) * 100 ;  //10 mV/degree with 600 mV offset
+  return Temp;
+}
+
 void setup(void)
 {
   Serial.begin( BAUD_RATE );   //using the serial port at 38400bps for debugging and logging
@@ -143,6 +171,13 @@ void loop(void)
 	Serial.print(nib(j), HEX);
       } 
       Serial.println("");
+      /* indoor temperature */
+      Serial.print("INDOOR1: ");
+      Serial.print(lm61(analogRead(LM61PIN)),1);
+      Serial.println(" deg C (LM61)");
+      Serial.print("INDOOR2: ");
+      Serial.print(Thermistor(analogRead(THERMPIN)),1); 
+      Serial.println(" deg C (thermistor)");
       if ((BitCount>29*4) && (nib(0)==0) && (nib(1)==0xE)) {
 	Serial.print("DATA: T= ");
 	tempC=(nib(26)*10-50 + nib(27) + ( (float) nib(28))/10);
