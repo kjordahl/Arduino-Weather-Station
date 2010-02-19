@@ -30,7 +30,11 @@
 #define C 2.620131E-06
 #define D 6.383091E-08
 
-#define VCC 5.05		/* supply voltage on USB */
+/* ADC depends on reference voltage.  Could tie this to internal 1.05 V */
+/* Linux machine voltage */
+#define VCC 4.85		/* supply voltage on USB */
+/* MacBook voltage */
+//#define VCC 5.05		/* supply voltage on USB */
 #define LM61PIN 0		/* analog pin for LM61 */
 #define THERMPIN 1		/* analog pin for thermistor */
 
