@@ -1,7 +1,62 @@
-// test RF receiver
-// receive La Crosse sensor date
+/* Name: lacrosse.pde
+ * Version: 1.0
+ * Author: Kelsey Jordahl
+ * Copyright: Kelsey Jordahl 2010
+   (portions copyright Marc Alexander, Jonathan Oxer 2009)
+ * License: GPLv3
+ * Time-stamp: <Fri Mar  5 18:15:11 EST 2010> 
+
+Receive La Crosse TX4 weather sensor data with Arduino and log to
+serial (USB) port.  Also records indoor temperature from two on-board
+sensors, a thermistor and an LM-61.  Assumes the 433 MHz data pin is
+connected to Digital Pin 8 (PB0).  Analog pins 0 and 1 are used for
+the temperature sensors, set in the define statements below.
+
+Based on idea, and some code, from Practical Arduino
+ http://www.practicalarduino.com/projects/weather-station-receiver
+ http://github.com/practicalarduino/WeatherStationReceiver
+
+Also useful was the detailed data protocol description at
+ http://www.f6fbb.org/domo/sensors/tx3_th.php
+
+433.92 MHz RF receiver:
+ http://www.sparkfun.com/commerce/product_info.php?products_id=8950
+
+Thermistor:
+ Vishay 10 kOhm NTC thermistor
+ part no: NTCLE100E3103GB0
+ <http://www.vishay.com/thermistors/list/product-29049>
+
+LM61:
+ National Semiconductor TO-92 Temperature Sensor
+ 10 mV/degree with 600 mV offset, temperature range -30 deg C to 100 deg C
+ part no: LM61BIZ
+ <http://www.national.com/mpf/LM/LM61.html>
+
+     see: http://www.arduino.cc/playground/ComponentLib/Thermistor2
+     and: http://www.ladyada.net/learn/sensors/tmp36.html
+
+
+
+    This program is free software: you can redistribute it and/or
+    modify it under the terms of the GNU General Public License as
+    published by the Free Software Foundation, either version 3 of the
+    License, or (at your option) any later version.  A copy of the GPL
+    version 3 license can be found in the file COPYING or at
+    <http://www.gnu.org/licenses/>.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+*/
 
 #include <math.h>
+
+// Comment out for a normal build
+// Uncomment for a debug build
+#define DEBUG
 
 #define INPUT_CAPTURE_IS_RISING_EDGE()    ((TCCR1B & _BV(ICES1)) != 0)
 #define INPUT_CAPTURE_IS_FALLING_EDGE()   ((TCCR1B & _BV(ICES1)) == 0)
@@ -13,7 +68,12 @@
 #define RED_TESTLED_OFF()            ((PORTD &= ~(1<<PORTD7)))
 #define RED_TESTLED_ON()           ((PORTD |=  (1<<PORTD7)))
 
+/* serial port communication (via USB) */
 #define BAUD_RATE 9600
+
+#define PACKET_SIZE 9   /* number of nibbles in packet (after inital byte) */
+#define PACKET_START 0x0A	/* byte to match for start of packet */
+
 // 0.5 ms high is a one
 #define MIN_ONE 135		// minimum length of '1'
 #define MAX_ONE 155		// maximum length of '1'
@@ -49,14 +109,19 @@ byte j;
 float tempC;			/* temperature in deg C */
 float tempF;			/* temperature in deg F */
 byte h;			/* relative humidity */
-unsigned int BitWait[200];
-unsigned int BitTime[200];
-volatile byte BitVal[200];
+byte DataPacket[PACKET_SIZE]; /* actively loading packet */
+byte FinishedPacket[PACKET_SIZE]; /* fully read packet */
+byte PacketBitCounter;
+boolean ReadingPacket;
+boolean PacketDone;
 
 byte bICP_CapturedPeriodWasHigh;
 byte bICP_PreviousCapturedPeriodWasHigh;
 byte echo;
+byte mask;		    /* temporary mask byte */
+byte CompByte;		    /* byte containing the last 8 bits read */
 
+// does nothing now
 ISR( TIMER1_OVF_vect )
 {
   //increment the 32 bit timestamp counter (see overflow notes above)
@@ -76,10 +141,10 @@ ISR( TIMER1_CAPT_vect )
   if( INPUT_CAPTURE_IS_RISING_EDGE() )
   {
     SET_INPUT_CAPTURE_FALLING_EDGE();      //previous period was low and just transitioned high
-    bICP_CapturedPeriodWasHigh = false;    //uiICP_CapturedPeriod about to be stored will be a low period      
+    bICP_CapturedPeriodWasHigh = false;    //uiICP_CapturedPeriod about to be stored will be a low period
   } else {
     SET_INPUT_CAPTURE_RISING_EDGE();       //previous period was high and transitioned low
-    bICP_CapturedPeriodWasHigh = true;     //uiICP_CapturedPeriod about to be stored will be a high period      
+    bICP_CapturedPeriodWasHigh = true;     //uiICP_CapturedPeriod about to be stored will be a high period
   }
 
   uiICP_CapturedPeriod = (uiICP_CapturedTime - uiICP_PreviousCapturedTime);
@@ -88,35 +153,69 @@ ISR( TIMER1_CAPT_vect )
     /* time from end of last bit to beginning of this one */
     SinceLastBit = (uiICP_PreviousCapturedTime - LastBitTime);
     
-    if ((uiICP_CapturedPeriod < MAX_ONE) && (SinceLastBit > MIN_WAIT)) { 
+    if ((uiICP_CapturedPeriod < MAX_ONE) && (SinceLastBit > MIN_WAIT)) {
       if (SinceLastBit > MAX_WAIT) { // too long since last bit read
 	RED_TESTLED_OFF();
 	echo=0;
-      } else {		  /* call it a one */
-	if ((echo>4) && (BitCount<200)) {		// don't do anything before at least 4 zeros
-	  BitVal[BitCount]=1;	// stupid, inefficient way to store a bit
-	  BitTime[BitCount]=uiICP_CapturedPeriod;
-	  BitWait[BitCount]=SinceLastBit;
-	  BitCount++;
-	  LastBitTime = uiICP_CapturedTime;
-	  echo++;
-	} else {
-	  //	  echo=0;
+	if (ReadingPacket) {
+          #ifdef DEBUG
+	  Serial.print("dropped packet. bits read: ");
+	  Serial.println(PacketBitCounter,DEC);
+	  #endif
+	  ReadingPacket=0;
+	  PacketBitCounter=0;
 	}
-      }
-    } else {
-      if ((uiICP_CapturedPeriod > MIN_ZERO) && (uiICP_CapturedPeriod < MAX_ZERO)) {
-	RED_TESTLED_ON();
-	BitVal[BitCount]=0;	// stupid, inefficient way to store a bit
-	BitTime[BitCount]=uiICP_CapturedPeriod;
-	BitWait[BitCount]=SinceLastBit;
-	BitCount++;
+	CompByte=0xFF;			  /* reset comparison byte */
+      } else { /* call it a one */
+	if (ReadingPacket) {	/* record the bit as a one */
+	  //	  Serial.print("1");
+	  mask = (1 << (3 - (PacketBitCounter & 0x03)));
+	  DataPacket[(PacketBitCounter >> 2)] |= mask;
+	  PacketBitCounter++;
+	} else {		  /* still looking for valid packet data */
+	  if (CompByte != 0xFF) {	/* don't bother recording if no zeros recently */
+	    CompByte = ((CompByte << 1) | 0x01); /* push one on the end */
+	  }
+	}
 	LastBitTime = uiICP_CapturedTime;
-	echo++;
+      }
+    } else {			/* Check whether it's a zero */
+      if ((uiICP_CapturedPeriod > MIN_ZERO) && (uiICP_CapturedPeriod < MAX_ZERO)) {
+	if (ReadingPacket) {	/* record the bit as a zero */
+	  //	  Serial.print("0");
+	  mask = (1 << (3 - (PacketBitCounter & 0x03)));
+	  DataPacket[(PacketBitCounter >> 2)] &= ~mask;
+	  PacketBitCounter++;
+	} else {		      /* still looking for valid packet data */
+	  CompByte = (CompByte << 1); /* push zero on the end */
+/* 	  if ((CompByte & 0xF0) != 0xf0) { */
+/* 	    Serial.println(CompByte,HEX); */
+/* 	  } */
+	}
+	LastBitTime = uiICP_CapturedTime;
       }
     }
-  }    
-  //----------------------------------------------------------------------------
+  }
+
+  if (ReadingPacket) {
+    if (PacketBitCounter == (4*PACKET_SIZE)) { /* done reading packet */
+      memcpy(&FinishedPacket,&DataPacket,PACKET_SIZE);
+      RED_TESTLED_OFF();
+      PacketDone = 1;
+      ReadingPacket = 0;
+      PacketBitCounter = 0;
+    }
+  } else {
+    /* Check whether we have the start of a data packet */
+    if (CompByte == PACKET_START) {
+      //      Serial.println("Got packet start!");
+      CompByte=0xFF;		/* reset comparison byte */
+      RED_TESTLED_ON();
+      /* set a flag and start recording data */
+      ReadingPacket = 1;
+    }
+  }
+
   //save the current capture data as previous so it can be used for period calculation again next time around
   uiICP_PreviousCapturedTime           = uiICP_CapturedTime;
   uiICP_PreviousCapturedPeriod         = uiICP_CapturedPeriod;
@@ -142,9 +241,8 @@ float lm61(int RawADC) {
   return Temp;
 }
 
-void setup(void)
-{
-  Serial.begin( BAUD_RATE );   //using the serial port at 38400bps for debugging and logging
+void setup() {
+  Serial.begin( BAUD_RATE );   //using the USB serial port for debugging and logging
   Serial.println( "La Crosse weather station capture begin" );
   DDRB = 0x2F;   // B00101111
   DDRB  &= ~(1<<DDB0);    //PBO(ICP1) input
@@ -164,58 +262,70 @@ void setup(void)
 
 }
 
-void loop(void)
-{
+// in the main loop, just hang around waiting to see whether the interrupt routine has gathered a full packet yet
+void loop() {
 
-  delay(1000);                  // wait for a second
-  if ((BitCount) && (~echo)) {	// have a bit string that's ended
-    if (BitCount>16) {		/* skip packets < 2 bytes */
-      Serial.print("RAW: ");
-      for (j=0; j<(BitCount/4); j++) {
-	Serial.print(nib(j), HEX);
-      } 
-      Serial.println("");
-      /* indoor temperature */
+  delay(2);                  // wait for a short time
+  if (PacketDone) {	     // have a bit string that's ended
+    ParsePacket(FinishedPacket);
+    PacketDone=0;
+  }
+}
+
+
+// parse a raw data string
+void ParsePacket(byte *Packet) {
+
+  byte chksum;
+
+  #ifdef DEBUG
+  Serial.print("RAW: ");
+  for (j=0; j<PACKET_SIZE; j++) {
+    Serial.print(Packet[j], HEX);
+  }	
+  Serial.println("");
+  #endif
+
+  chksum = 0x0A;
+  for (j=0; j<(PACKET_SIZE-1); j++) {
+    chksum += Packet[j];
+  }
+  
+  if ((chksum & 0x0F) == Packet[PACKET_SIZE-1]) { /* checksum pass */
+    if (Packet[0]==0) {		/* temperature packet */
+      Serial.print("DATA: T= ");
+      tempC=(Packet[3]*10-50 + Packet[4] + ( (float) Packet[5])/10);
+      tempF=tempC*9/5 + 32;
+      Serial.print(tempC,1);	/* print to 0.1 deg precision */
+      Serial.print(" degC, ");
+      Serial.print(tempF,1);	/* print to 0.1 deg precision */
+      Serial.println(" degF");
+      PrintIndoor();
+    } else {
+      if (Packet[0]==0x0E) {		/* humidity packet */
+	Serial.print("DATA: H= ");
+	h=(Packet[3]*10 + Packet[4]);
+	Serial.print(h,DEC);
+	Serial.println(" %");
+      }
+    }
+  }
+  else {			/* checksum fail */
+    #ifdef DEBUG
+    Serial.print("chksum = 0x");
+    Serial.print(chksum,HEX);
+    Serial.print(" data chksum = 0x");
+    Serial.println(Packet[PACKET_SIZE-1],HEX);
+    #endif
+  }
+}
+
+// send indoor temperature to serial port
+void PrintIndoor(void) {
       Serial.print("INDOOR1: ");
       Serial.print(lm61(analogRead(LM61PIN)),1);
       Serial.println(" deg C (LM61)");
       Serial.print("INDOOR2: ");
       Serial.print(Thermistor(analogRead(THERMPIN)),1); 
       Serial.println(" deg C (thermistor)");
-      if ((BitCount>29*4) && (nib(0)==0) && (nib(1)==0xE)) {
-	Serial.print("DATA: T= ");
-	tempC=(nib(26)*10-50 + nib(27) + ( (float) nib(28))/10);
-	tempF=tempC*9/5 + 32;
-	h=nib(15)*10+nib(16);
-	Serial.print(tempC,1);	/* print to 0.1 deg precision */
-	Serial.print(" degC, ");
-	Serial.print(tempF,1);	/* print to 0.1 deg precision */
-	Serial.print(" degF, H= ");
-	Serial.print(h,DEC);
-	Serial.print(" rawT ");
- 	Serial.print(nib(26),HEX);
- 	Serial.print(nib(27),HEX);
- 	Serial.print(nib(28),HEX);
-      } else {
-	Serial.print("garbled packet, T= ");
-	if (BitCount >=29*4) {
-	  tempC=(nib(26)*10-50 + nib(27) + ( (float) nib(28))/10);
-	  Serial.print(tempC,1);
-	} else {
-	  Serial.print("NaN");
-	}
-      }
-      Serial.println("");
-    }
-    BitCount=0;
-  }
-}
-
-// get a nibble
-byte nib(byte bc) {
-
-byte tmp;
-
- tmp = ((BitVal[bc*4+1] << 3) + (BitVal[bc*4+2] << 2) + (BitVal[bc*4+3] << 1) + (BitVal[bc*4+4]));
- return tmp;
 }
