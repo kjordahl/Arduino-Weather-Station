@@ -4,7 +4,7 @@
  * Copyright: Kelsey Jordahl 2010
    (portions copyright Marc Alexander, Jonathan Oxer 2009)
  * License: GPLv3
- * Time-stamp: <Tue Mar  9 16:31:18 EST 2010> 
+ * Time-stamp: <Tue Mar  9 17:11:39 EST 2010> 
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor temperature from two on-board
@@ -156,6 +156,17 @@ ISR( TIMER1_CAPT_vect )
     
     if ((uiICP_CapturedPeriod < MAX_ONE) && (SinceLastBit > MIN_WAIT)) {
       if (SinceLastBit > MAX_WAIT) { // too long since last bit read
+	if ((SinceLastBit > (2*MIN_WAIT+MIN_ONE)) && (SinceLastBit < (2*MAX_WAIT+MAX_ONE))) { /* missed a one */
+          #ifdef DEBUG
+	  Serial.println("missed one");
+	  #endif
+	} else {
+	  if ((SinceLastBit > (2*MIN_WAIT+MIN_ZERO)) && (SinceLastBit < (2*MAX_WAIT+MAX_ZERO))) { /* missed a zero */
+            #ifdef DEBUG
+	    Serial.println("missed zero");
+	    #endif
+	  }
+	}
 	RED_TESTLED_OFF();
 	echo=0;
 	if (ReadingPacket) {
@@ -299,31 +310,37 @@ void ParsePacket(byte *Packet) {
   }
   
   if ((chksum & 0x0F) == Packet[PACKET_SIZE-1]) { /* checksum pass */
-    if (Packet[0]==0) {		/* temperature packet */
-      Serial.print("DATA: T= ");
-      tempC=(Packet[3]*10-50 + Packet[4] + ( (float) Packet[5])/10);
-      tempF=tempC*9/5 + 32;
-      Serial.print(tempC,1);	/* print to 0.1 deg precision */
-      Serial.print(" degC, ");
-      Serial.print(tempF,1);	/* print to 0.1 deg precision */
-      Serial.println(" degF");
-      PrintIndoor();
-      dp=dewpoint(tempC,h);
-      Serial.print("DEWPOINT: ");
-      Serial.print(dp,1);
-      Serial.print(" degC, ");
-      Serial.print(dp*9/5 + 32,1);
-      Serial.println(" degF");
-    } else {
-      if (Packet[0]==0x0E) {		/* humidity packet */
-	Serial.print("DATA: H= ");
-	h=(Packet[3]*10 + Packet[4]);
-	Serial.print(h,DEC);
-	Serial.println(" %");
+    /* check for bad digits and make sure that most significant digits repeat */
+    if ((Packet[3]==Packet[6]) && (Packet[4]==Packet[7]) && (Packet[3]<10) && (Packet[4]<10) && (Packet[5]<10)) {
+      if (Packet[0]==0) {		/* temperature packet */
+	Serial.print("DATA: T= ");
+	tempC=(Packet[3]*10-50 + Packet[4] + ( (float) Packet[5])/10);
+	tempF=tempC*9/5 + 32;
+	Serial.print(tempC,1);	/* print to 0.1 deg precision */
+	Serial.print(" degC, ");
+	Serial.print(tempF,1);	/* print to 0.1 deg precision */
+	Serial.println(" degF");
+	PrintIndoor();
+	dp=dewpoint(tempC,h);
+	Serial.print("DEWPOINT: ");
+	Serial.print(dp,1);
+	Serial.print(" degC, ");
+	Serial.print(dp*9/5 + 32,1);
+	Serial.println(" degF");
+      } else {
+	if (Packet[0]==0x0E) {		/* humidity packet */
+	  Serial.print("DATA: H= ");
+	  h=(Packet[3]*10 + Packet[4]);
+	  Serial.print(h,DEC);
+	  Serial.println(" %");
+	}
       }
+    } else {
+      #ifdef DEBUG
+      Serial.println("Fail secondary data check.");
+      #endif
     }
-  }
-  else {			/* checksum fail */
+  } else {			/* checksum fail */
     #ifdef DEBUG
     Serial.print("chksum = 0x");
     Serial.print(chksum,HEX);
