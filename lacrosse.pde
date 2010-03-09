@@ -4,9 +4,9 @@
  * Copyright: Kelsey Jordahl 2010
    (portions copyright Marc Alexander, Jonathan Oxer 2009)
  * License: GPLv3
- * Time-stamp: <Fri Mar  5 18:15:11 EST 2010> 
+ * Time-stamp: <Tue Mar  9 16:31:18 EST 2010> 
 
-Receive La Crosse TX4 weather sensor data with Arduino and log to
+Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor temperature from two on-board
 sensors, a thermistor and an LM-61.  Assumes the 433 MHz data pin is
 connected to Digital Pin 8 (PB0).  Analog pins 0 and 1 are used for
@@ -108,6 +108,7 @@ unsigned int BitCount;
 byte j;
 float tempC;			/* temperature in deg C */
 float tempF;			/* temperature in deg F */
+float dp;			/* dewpoint (deg C) */
 byte h;			/* relative humidity */
 byte DataPacket[PACKET_SIZE]; /* actively loading packet */
 byte FinishedPacket[PACKET_SIZE]; /* fully read packet */
@@ -241,6 +242,12 @@ float lm61(int RawADC) {
   return Temp;
 }
 
+float dewpoint(float T, float h) {
+  float td;
+  td = T - (100-h)*pow(((T+273.15)/300),2)/5 - 0.00135*pow(h-84,2) + 0.35;
+  return td;
+}
+
 void setup() {
   Serial.begin( BAUD_RATE );   //using the USB serial port for debugging and logging
   Serial.println( "La Crosse weather station capture begin" );
@@ -301,6 +308,12 @@ void ParsePacket(byte *Packet) {
       Serial.print(tempF,1);	/* print to 0.1 deg precision */
       Serial.println(" degF");
       PrintIndoor();
+      dp=dewpoint(tempC,h);
+      Serial.print("DEWPOINT: ");
+      Serial.print(dp,1);
+      Serial.print(" degC, ");
+      Serial.print(dp*9/5 + 32,1);
+      Serial.println(" degF");
     } else {
       if (Packet[0]==0x0E) {		/* humidity packet */
 	Serial.print("DATA: H= ");
@@ -322,9 +335,10 @@ void ParsePacket(byte *Packet) {
 
 // send indoor temperature to serial port
 void PrintIndoor(void) {
-      Serial.print("INDOOR1: ");
-      Serial.print(lm61(analogRead(LM61PIN)),1);
-      Serial.println(" deg C (LM61)");
+  /* don't write the LM61 data */
+/*       Serial.print("INDOOR1: "); */
+/*       Serial.print(lm61(analogRead(LM61PIN)),1); */
+/*       Serial.println(" deg C (LM61)"); */
       Serial.print("INDOOR2: ");
       Serial.print(Thermistor(analogRead(THERMPIN)),1); 
       Serial.println(" deg C (thermistor)");
