@@ -1,10 +1,10 @@
 /* Name: lacrosse.pde
- * Version: 1.0
+ * Version: 0.9
  * Author: Kelsey Jordahl
  * Copyright: Kelsey Jordahl 2010
    (portions copyright Marc Alexander, Jonathan Oxer 2009)
  * License: GPLv3
- * Time-stamp: <Tue Mar  9 17:11:39 EST 2010> 
+ * Time-stamp: <Tue Mar  9 22:04:40 EST 2010> 
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor temperature from two on-board
@@ -64,7 +64,7 @@ LM61:
 #define SET_INPUT_CAPTURE_FALLING_EDGE()  (TCCR1B &= ~_BV(ICES1))
 #define GREEN_TESTLED_ON()          ((PORTD &= ~(1<<PORTD6)))
 #define GREEN_TESTLED_OFF()         ((PORTD |=  (1<<PORTD6)))
-// I reversed the red - did I flip the LED?
+// I reversed the red - did I flip the LED from the schematic?
 #define RED_TESTLED_OFF()            ((PORTD &= ~(1<<PORTD7)))
 #define RED_TESTLED_ON()           ((PORTD |=  (1<<PORTD7)))
 
@@ -95,13 +95,13 @@ LM61:
 #define VCC 4.85		/* supply voltage on USB */
 /* MacBook voltage */
 //#define VCC 5.05		/* supply voltage on USB */
-#define LM61PIN 0		/* analog pin for LM61 */
+#define LM61PIN 0		/* analog pin for LM61 sensor */
 #define THERMPIN 1		/* analog pin for thermistor */
 
-unsigned int uiICP_CapturedTime;
-unsigned int uiICP_PreviousCapturedTime;
-unsigned int uiICP_CapturedPeriod;
-unsigned int uiICP_PreviousCapturedPeriod;
+unsigned int CapturedTime;
+unsigned int PreviousCapturedTime;
+unsigned int CapturedPeriod;
+unsigned int PreviousCapturedPeriod;
 unsigned int SinceLastBit;
 unsigned int LastBitTime;
 unsigned int BitCount;
@@ -109,16 +109,15 @@ byte j;
 float tempC;			/* temperature in deg C */
 float tempF;			/* temperature in deg F */
 float dp;			/* dewpoint (deg C) */
-byte h;			/* relative humidity */
-byte DataPacket[PACKET_SIZE]; /* actively loading packet */
+byte h;				/* relative humidity */
+byte DataPacket[PACKET_SIZE];	  /* actively loading packet */
 byte FinishedPacket[PACKET_SIZE]; /* fully read packet */
 byte PacketBitCounter;
 boolean ReadingPacket;
 boolean PacketDone;
 
-byte bICP_CapturedPeriodWasHigh;
-byte bICP_PreviousCapturedPeriodWasHigh;
-byte echo;
+byte CapturedPeriodWasHigh;
+byte PreviousCapturedPeriodWasHigh;
 byte mask;		    /* temporary mask byte */
 byte CompByte;		    /* byte containing the last 8 bits read */
 
@@ -135,26 +134,26 @@ ISR( TIMER1_CAPT_vect )
 {
   // Immediately grab the current capture time in case it triggers again and
   // overwrites ICR1 with an unexpected new value
-  uiICP_CapturedTime = ICR1;
+  CapturedTime = ICR1;
 
   // GREEN test led on (flicker for debug)
   GREEN_TESTLED_ON();
   if( INPUT_CAPTURE_IS_RISING_EDGE() )
   {
     SET_INPUT_CAPTURE_FALLING_EDGE();      //previous period was low and just transitioned high
-    bICP_CapturedPeriodWasHigh = false;    //uiICP_CapturedPeriod about to be stored will be a low period
+    CapturedPeriodWasHigh = false;    //uiICP_CapturedPeriod about to be stored will be a low period
   } else {
     SET_INPUT_CAPTURE_RISING_EDGE();       //previous period was high and transitioned low
-    bICP_CapturedPeriodWasHigh = true;     //uiICP_CapturedPeriod about to be stored will be a high period
+    CapturedPeriodWasHigh = true;     //uiICP_CapturedPeriod about to be stored will be a high period
   }
 
-  uiICP_CapturedPeriod = (uiICP_CapturedTime - uiICP_PreviousCapturedTime);
+  CapturedPeriod = (CapturedTime - PreviousCapturedTime);
 
-  if ((uiICP_CapturedPeriod > MIN_ONE) && (bICP_CapturedPeriodWasHigh == true)) { // possible bit
+  if ((CapturedPeriod > MIN_ONE) && (CapturedPeriodWasHigh == true)) { // possible bit
     /* time from end of last bit to beginning of this one */
-    SinceLastBit = (uiICP_PreviousCapturedTime - LastBitTime);
+    SinceLastBit = (PreviousCapturedTime - LastBitTime);
     
-    if ((uiICP_CapturedPeriod < MAX_ONE) && (SinceLastBit > MIN_WAIT)) {
+    if ((CapturedPeriod < MAX_ONE) && (SinceLastBit > MIN_WAIT)) {
       if (SinceLastBit > MAX_WAIT) { // too long since last bit read
 	if ((SinceLastBit > (2*MIN_WAIT+MIN_ONE)) && (SinceLastBit < (2*MAX_WAIT+MAX_ONE))) { /* missed a one */
           #ifdef DEBUG
@@ -168,7 +167,6 @@ ISR( TIMER1_CAPT_vect )
 	  }
 	}
 	RED_TESTLED_OFF();
-	echo=0;
 	if (ReadingPacket) {
           #ifdef DEBUG
 	  Serial.print("dropped packet. bits read: ");
@@ -189,10 +187,10 @@ ISR( TIMER1_CAPT_vect )
 	    CompByte = ((CompByte << 1) | 0x01); /* push one on the end */
 	  }
 	}
-	LastBitTime = uiICP_CapturedTime;
+	LastBitTime = CapturedTime;
       }
     } else {			/* Check whether it's a zero */
-      if ((uiICP_CapturedPeriod > MIN_ZERO) && (uiICP_CapturedPeriod < MAX_ZERO)) {
+      if ((CapturedPeriod > MIN_ZERO) && (CapturedPeriod < MAX_ZERO)) {
 	if (ReadingPacket) {	/* record the bit as a zero */
 	  //	  Serial.print("0");
 	  mask = (1 << (3 - (PacketBitCounter & 0x03)));
@@ -204,7 +202,7 @@ ISR( TIMER1_CAPT_vect )
 /* 	    Serial.println(CompByte,HEX); */
 /* 	  } */
 	}
-	LastBitTime = uiICP_CapturedTime;
+	LastBitTime = CapturedTime;
       }
     }
   }
@@ -229,9 +227,9 @@ ISR( TIMER1_CAPT_vect )
   }
 
   //save the current capture data as previous so it can be used for period calculation again next time around
-  uiICP_PreviousCapturedTime           = uiICP_CapturedTime;
-  uiICP_PreviousCapturedPeriod         = uiICP_CapturedPeriod;
-  bICP_PreviousCapturedPeriodWasHigh   = bICP_CapturedPeriodWasHigh;
+  PreviousCapturedTime           = CapturedTime;
+  PreviousCapturedPeriod         = CapturedPeriod;
+  PreviousCapturedPeriodWasHigh   = CapturedPeriodWasHigh;
   
   //GREEN test led off (flicker for debug)
   GREEN_TESTLED_OFF();
@@ -246,6 +244,7 @@ float Thermistor(int RawADC) {
   return Temp;
 }
 
+// not currently used
 float lm61(int RawADC) {
   float Temp;
   float voltage = RawADC * VCC / 1024; 
@@ -255,6 +254,7 @@ float lm61(int RawADC) {
 
 float dewpoint(float T, float h) {
   float td;
+  // Simplified dewpoint formula from Lawrence (2005), doi:10.1175/BAMS-86-2-225
   td = T - (100-h)*pow(((T+273.15)/300),2)/5 - 0.00135*pow(h-84,2) + 0.35;
   return td;
 }
