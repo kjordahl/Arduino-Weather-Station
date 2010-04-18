@@ -6,7 +6,7 @@
 # and sitecopy <http://www.manyfish.co.uk/sitecopy>
 
 # Kelsey Jordahl
-# Time-stamp: <Sun Mar 14 19:37:50 EDT 2010>
+# Time-stamp: <Sun Apr 18 16:34:41 EDT 2010>
 
 # make sure GMT tools are in current path, even running as cron job
 GMTHOME=/usr/lib/gmt
@@ -24,20 +24,31 @@ gmtset PLOT_DATE_FORMAT dd-o
 gmtset PLOT_CLOCK_FORMAT hh:mm
 gmtset ANNOT_FONT_SIZE_PRIMARY +9p
 gmtset BASEMAP_AXES WESn
-SERIALLOG=/home/kels/lacrosse/serial.log # file to read weather data from
+# concatenate two most recent logfiles
+cat /home/kels/lacrosse/serial.log.0 /home/kels/lacrosse/serial.log > /tmp/serial.log
+SERIALLOG=/tmp/serial.log # file to read weather data from
 LOGFILE=/tmp/plotgmt.log		 # log output of script
 DIR=/home/kels/html/weather
 PSFILE=$DIR/plot.ps
-MINT=-5
-MAXT=25
+MINT=-40
+MAXT=40
 DATE=`grep -a "DATA: T=" $SERIALLOG | tail -1 | awk '{print $1, $2, $3, $4, $5}'`
 TEMPF=`grep -a "DATA: T=" $SERIALLOG | tail -1 | awk '{print $11}'`
 HUMID=`grep -a "DATA: H=" $SERIALLOG | tail -1 | awk '{print $9}'`
 DEWPOINT=`grep -a "DEWPOINT" $SERIALLOG | tail -1 | awk '{print $10}'`
+YDAY=`date -u +%s -d now-24hours`
+grep -a "DATA: T=" $SERIALLOG | awk '{print $6, $9}' | gmtselect -R$YDAY/1e10/-40/40 | minmax -C > /tmp/minmax.tmp
+LOW=`awk '{print $3}' /tmp/minmax.tmp`
+# bc truncates instead of rounding; this was the simplest way I found to round
+LOW=`echo "scale=1; ($LOW*90/5+320.5)/10" | bc` # Fahrenheit
+echo $LOW
+HIGH=`awk '{print $4}' /tmp/minmax.tmp`
+HIGH=`echo "scale=1; ($HIGH*90/5+320.5)/10" | bc` # Fahrenheit
+echo $HIGH
 echo $DATE > $LOGFILE
 echo $PWD >> $LOGFILE
 echo $PATH >> $LOGFILE
-sed s/TEMPF/$TEMPF/ $DIR/template.html | sed s/HUMID/$HUMID/ | sed "s/DATE/$DATE/" | sed s/DEWPOINT/$DEWPOINT/ > $DIR/weather.html
+sed s/TEMPF/$TEMPF/ $DIR/template.html | sed s/HUMID/$HUMID/ | sed "s/DATE/$DATE/" | sed s/DEWPOINT/$DEWPOINT/ | sed s/LOW/$LOW/ | sed s/HIGH/$HIGH/ > $DIR/weather.html
 STARTTIME=`date -u +%s -d now-${DAYS}days`
 R=`grep -a "DATA: T=" $SERIALLOG | awk '{print $6, $9}' | gmtselect -R${STARTTIME}/1e10/$MINT/$MAXT | minmax -I86400/1 -C | awk '{print "-R" $1+17280 "/" $2+17280 "/" $3 "/" $4+1}'`
 echo $R

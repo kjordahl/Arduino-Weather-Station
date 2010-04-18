@@ -1,3 +1,5 @@
+14 March 2010
+
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also calculates the dewpoint from current
 temperature and relative humidity, and records indoor temperature from
@@ -32,7 +34,7 @@ or <http://www.gnu.org/licenses/> for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sun Mar 14 19:33:19 EDT 2010>
+Time-stamp: <Sun Apr 18 16:42:49 EDT 2010>
 
 CONTENTS:
 README		This information file
@@ -41,3 +43,8 @@ logserial.pl	example Perl script to log from serial port and add timestamp
 plotT.m		example matlab script to plot data
 plotgmt.cmd	GMT script for uploading data to website
 template.html	blank HTML file used as template by plotgmt.cmd
+
+Changelog:
+
+3 April 2010: Update plotting scripts for daily high & low
+  	      temperatures (in Fahrenheit).
