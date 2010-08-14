@@ -45,14 +45,14 @@ or <http://www.gnu.org/licenses/> for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Aug 14 17:50:44 EDT 2010>
+Time-stamp: <Sat Aug 14 18:07:45 EDT 2010>
 
 CONTENTS:
 README		This information file
 lacrosse.pde	Arduino code
 logserial.pl	example Perl script to log from serial port and add timestamp
 plotT.m		example matlab script to plot data
-plotgmt.cmd	GMT script for uploading data to website
+plotweather.cmd	GMT script for uploading data to website
 template.html	blank HTML file used as template by plotgmt.cmd
 
 Changelog:
