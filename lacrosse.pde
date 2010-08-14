@@ -1,17 +1,18 @@
 /* Name: lacrosse.pde
- * Version: 0.9.9
+ * Version: 1.0
  * Author: Kelsey Jordahl
  * Copyright: Kelsey Jordahl 2010
-   (portions copyright Marc Alexander, Jonathan Oxer 2009)
-   (BMP085 functionality from http://interactive-matter.org)
+   (portions copyright Marc Alexander, Jonathan Oxer 2009;
+    Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Tue Aug  3 18:11:32 EDT 2010> 
+ * Time-stamp: <Sat Aug 14 17:28:21 EDT 2010> 
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
 two on-board sensors, a BMP085 and a thermistor.  Assumes the 433 MHz
 data pin is connected to Digital Pin 8 (PB0).  Analog pins 0 and 1 are
 used for the temperature sensors, set in the define statements below.
+Analog pins 4 and 5 are used for I2C communication with BMP085.
 
 Based on idea, and some code, from Practical Arduino
  http://www.practicalarduino.com/projects/weather-station-receiver
@@ -66,7 +67,7 @@ LM61 (no longer used):
 
 // Comment out for a normal build
 // Uncomment for a debug build
-#define DEBUG
+//#define DEBUG
 
 #define INPUT_CAPTURE_IS_RISING_EDGE()    ((TCCR1B & _BV(ICES1)) != 0)
 #define INPUT_CAPTURE_IS_FALLING_EDGE()   ((TCCR1B & _BV(ICES1)) == 0)
@@ -78,7 +79,7 @@ LM61 (no longer used):
 #define RED_TESTLED_OFF()            ((PORTD &= ~(1<<PORTD7)))
 #define RED_TESTLED_ON()           ((PORTD |=  (1<<PORTD7)))
 #define I2C_ADDRESS 0x77
-#define MAXTICK 6000	 /* about 60 s interval for pressure sampling */
+#define MAXTICK 6009	 /* about 60 s interval for pressure sampling */
 
 /* serial port communication (via USB) */
 #define BAUD_RATE 9600
@@ -102,12 +103,12 @@ LM61 (no longer used):
 #define C 2.620131E-06
 #define D 6.383091E-08
 
-/* ADC depends on reference voltage.  Could tie this to internal 1.05 V */
+/* ADC depends on reference voltage.  Could tie this to internal 1.05 V? */
 /* Linux machine voltage */
-#define VCC 4.85		/* supply voltage on USB */
+//#define VCC 4.85		/* supply voltage on USB */
 /* MacBook voltage */
 //#define VCC 5.05		/* supply voltage on USB */
-#define LM61PIN 0		/* analog pin for LM61 sensor */
+//#define LM61PIN 0		/* analog pin for LM61 sensor */
 #define THERMPIN 1		/* analog pin for thermistor */
 
 const unsigned char oversampling_setting = 3; //oversampling for measurement
@@ -288,12 +289,13 @@ float Thermistor(int RawADC) {
 }
 
 // not currently used
+/*
 float lm61(int RawADC) {
   float Temp;
   float voltage = RawADC * VCC / 1024; 
   Temp = (voltage - 0.6) * 100 ;  //10 mV/degree with 600 mV offset
   return Temp;
-}
+} */
 
 float dewpoint(float T, float h) {
   float td;
@@ -345,6 +347,7 @@ void loop() {
     timerflag = false;
     interval=millis() - starttime; /* measure time since last sample */
     starttime = millis();
+    PrintIndoor();		/* get thermistor temp */
     bmp085_read_temperature_and_pressure(&temperature,&pressure);
     Serial.print("ELAPSED MS= ");
     Serial.println(interval,DEC);
@@ -386,7 +389,7 @@ void ParsePacket(byte *Packet) {
 	Serial.print(" degC, ");
 	Serial.print(tempF,1);	/* print to 0.1 deg precision */
 	Serial.println(" degF");
-	PrintIndoor();
+	/* PrintIndoor(); // moved to time interval sampling with pressure */
 	dp=dewpoint(tempC,h);
 	Serial.print("DEWPOINT: ");
 	Serial.print(dp,1);
@@ -428,11 +431,12 @@ void ParsePacket(byte *Packet) {
 
 // send indoor temperature to serial port
 void PrintIndoor(void) {
-  /* don't write the LM61 data */
+  /* read from LM61 */
 /*       Serial.print("INDOOR1: "); */
 /*       Serial.print(lm61(analogRead(LM61PIN)),1); */
 /*       Serial.println(" deg C (LM61)"); */
-      Serial.print("INDOOR2: ");
+  /* read from thermistor */
+      Serial.print("INDOOR: ");
       Serial.print(Thermistor(analogRead(THERMPIN)),1); 
       Serial.println(" deg C (thermistor)");
 }
