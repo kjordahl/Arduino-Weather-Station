@@ -6,7 +6,7 @@
 # and sitecopy <http://www.manyfish.co.uk/sitecopy>
 
 # Kelsey Jordahl
-# Time-stamp: <Fri Aug  6 16:05:06 EDT 2010>
+# Time-stamp: <Fri Sep  3 16:20:20 EDT 2010>
 
 # make sure GMT tools are in current path, even running as cron job
 GMTHOME=/usr/lib/gmt
@@ -47,10 +47,18 @@ LOGFILE=/tmp/plotgmt.log		 # log output of script
 DIR=/home/kels/html/weather
 #DIR=/home/kels/lacrosse
 PSFILE=$DIR/plot.ps
+STARTTIME=`date -u +%s -d now-${DAYS}days | minmax -C -I86400 | awk '{print $1}'`
 MINT=-40
 MAXT=40
+# set min/max pressure in graph to at least these values
 MINP=1002
-MAXP=1022
+MAXP=1024
+grep -a "DATA: P= [0-9]\{5,\} " ~/lacrosse/serial.log | awk '{print $6, $9}' | gmtselect -R${STARTTIME}/1e10/0/1200000 | awk '{print $2}' | gmtmath -N0/0 STDIN 1 139 44330 DIV SUB 5.255 POW DIV 100 DIV = | minmax -C -I1 | sed 's/\t/\n/' > /tmp/minmax.p
+echo $MINP >> /tmp/minmax.p
+echo $MAXP >> /tmp/minmax.p
+# actual min/max pressure to use
+MINP=`minmax -C -I1 /tmp/minmax.p | awk '{print $1}'`
+MAXP=`minmax -C -I1 /tmp/minmax.p | awk '{print $2}'`
 DATE=`grep -a "DATA: T=" $SERIALLOG | tail -1 | awk '{print $1, $2, $3, $4, $5}'`
 TEMPF=`grep -a "DATA: T=" $SERIALLOG | tail -1 | awk '{print $11}'`
 HUMID=`grep -a "DATA: H=" $SERIALLOG | tail -1 | awk '{print $9}'`
@@ -70,7 +78,6 @@ echo $DATE > $LOGFILE
 echo $PWD >> $LOGFILE
 echo $PATH >> $LOGFILE
 sed s/TEMPF/$TEMPF/ $DIR/template.html | sed s/HUMID/$HUMID/ | sed "s/DATE/$DATE/" | sed s/DEWPOINT/$DEWPOINT/ | sed s/PRESS/$PRESS/ | sed s/LOW/$LOW/ | sed s/HIGH/$HIGH/ > $DIR/current.html
-STARTTIME=`date -u +%s -d now-${DAYS}days`
 R=`grep -a "DATA: T=" $SERIALLOG | awk '{print $6, $9}' | gmtselect -R${STARTTIME}/1e10/$MINT/$MAXT | minmax -I86400/1 -C | awk '{print "-R" $1+17280 "/" $2+17280 "/" $3 "/" $4+1}'`
 echo $R
 # Fahrenheit axis options
