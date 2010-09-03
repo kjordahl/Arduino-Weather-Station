@@ -45,7 +45,7 @@ or <http://www.gnu.org/licenses/> for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Aug 14 18:07:45 EDT 2010>
+Time-stamp: <Fri Sep  3 16:27:31 EDT 2010>
 
 CONTENTS:
 README		This information file
@@ -57,8 +57,11 @@ template.html	blank HTML file used as template by plotgmt.cmd
 
 Changelog:
 
+v1.0.3
+3 Sep 2010: improve plotting, including pressure and better autoranging
+
 v1.0
-14 Aug 2010: Release working version
+14 Aug 2010: Release full version
 
 v0.9.9
 3 Aug 2010: Added support for BMP085 pressure sensor on board
