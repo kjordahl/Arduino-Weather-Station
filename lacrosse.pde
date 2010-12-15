@@ -5,7 +5,7 @@
    (portions copyright Marc Alexander, Jonathan Oxer 2009;
     Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Sat Aug 14 17:28:21 EDT 2010> 
+ * Time-stamp: <Mon Sep 13 15:22:10 EDT 2010> 
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
@@ -329,7 +329,7 @@ void setup() {
   TCCR2B = ((1<<CS22) | (1<<CS21) | (1<<CS20)); /* clock/1024 prescaler */
   TIMSK2 = (1<<OCIE2A);	  /* enable interupts */
   ASSR &= ~(1<<AS2);	  /* make sure we're running on internal clock */
-  OCR2A = 155;	       /* interrupt f=100.16 Hz, just under 0.1 ms period */
+  OCR2A = 155;	       /* interrupt f=100.16 Hz, just under 10 ms period */
   sei();
   interrupts();   // Enable interrupts (NOTE: is this necessary? Should be enabled by default)
 
