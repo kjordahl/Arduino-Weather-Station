@@ -15,7 +15,7 @@ or http://github.com/kjordahl/Arduino-Weather-Station
 Author: Kelsey Jordahl
 Copyright: Kelsey Jordahl 2010
 License: GPLv3
-Time-stamp: <Wed Dec 15 14:56:55 EST 2010>
+Time-stamp: <Fri Dec 17 11:51:09 EST 2010>
 
     This program is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -42,9 +42,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 
 TZ = 'EST'                              # TODO: set DST when appropriate
 LOGDIR = '/home/kels/lacrosse'
-#LOGDIR = '/Users/kels/misc/lacrosse'
 OUTDIR = '/home/kels/html/weather'         # output directory
-#OUTDIR = '/Users/kels/misc/lacrosse'         # output directory
 
 def main():
     logfilename = os.path.join(LOGDIR,'serial.log')
@@ -59,7 +57,8 @@ def main():
     temp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',logfile.read()), dtype=np.float64)
     current.temp = temp[len(temp)-1,1]            # most recent temp
     now = int(temp[len(temp)-1,0])                # in Unix seconds
-    current.time = dates.num2date(dates.epoch2num(now)); # Python datetime
+    # store as Python datetime, in local time, naive format with no real tzinfo set
+    current.time = dates.num2date(dates.epoch2num(now-timezone)); 
     current.max = np.max(temp[temp[:,0] > (now-86400),1])
     current.min = np.min(temp[temp[:,0] > (now-86400),1])
     print len(temp)
@@ -171,15 +170,23 @@ def datelabels(ax):
         dates.DateFormatter('%d %b')
         )
 
+# this could be a method in Weather class instead
 def save_html(c):
     """Update static HTML file with current weather data"""
     templatefile = os.path.join(OUTDIR,'template_py.html')
+    jsfile = os.path.join(OUTDIR,'javascript.html')
     outfile = os.path.join(OUTDIR,'current.html')
     html = open(templatefile,'r')
     lines = html.read()
+    # if javascript file exists, it will be inserted into template
+    if os.path.exists(jsfile):
+        j = open(jsfile,'r')
+        javascript = j.read()
+    else:
+        javascript = ""
     # print lines
     out = open(outfile,'w')
-    out.write(lines % (c.time.strftime("%a %d %b %Y %H:%M:%S UTC"), c.fahrenheit, c2f(c.max), c2f(c.min), c.humid, c2f(c.dewpoint), c.pressure))
+    out.write(lines % (c.time.strftime("%a %d %b %Y %H:%M:%S " + TZ), c.fahrenheit, c2f(c.max), c2f(c.min), c.humid, c2f(c.dewpoint), c.pressure, javascript))
     out.close()
 
 def c2f(tempC):
@@ -188,7 +195,7 @@ def c2f(tempC):
 
 def sealevel(P,h):
     """Calculate pressure at sea level given altitude of sensor in meters
-    From th BMP085 pressure sensor datasheet
+    From the BMP085 pressure sensor datasheet
     http://www.bosch-sensortec.com/.../BMP085_DataSheet_Rev.1.0_01July2008.pdf"""
     return P / (1 - h/44330.0)**5.255
 
