@@ -15,7 +15,7 @@ or http://github.com/kjordahl/Arduino-Weather-Station
 Author: Kelsey Jordahl
 Copyright: Kelsey Jordahl 2010
 License: GPLv3
-Time-stamp: <Fri Dec 17 11:51:09 EST 2010>
+Time-stamp: <Mon Jan 17 22:13:48 EST 2011>
 
     This program is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -39,9 +39,11 @@ import numpy as np
 from matplotlib import dates, pyplot
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
+import tempfile
 
 TZ = 'EST'                              # TODO: set DST when appropriate
-LOGDIR = '/home/kels/lacrosse'
+#LOGDIR = '/home/kels/lacrosse'
+LOGDIR = '/usr/local/share/logserial'
 OUTDIR = '/home/kels/html/weather'         # output directory
 
 def main():
@@ -51,10 +53,24 @@ def main():
     h = 139                             # elevation in meters
     ndays = 4                           # number of days to plot
 
+    # copy DATA lines to temporary file, concatenating current and former logfiles
+    t = tempfile.TemporaryFile()
+    # to have a named file for testing:
+    # t = tempfile.NamedTemporaryFile(delete=False)
+    logfile = open(oldlogfilename,'r')
+    for line in logfile:
+        if re.match("(.*)DATA(.*)", line):
+            t.write(line)
+    logfile.close()
     logfile = open(logfilename,'r')
-    # read into numpy array for each parameter
-    # reads 3 times; could read once and parse that
-    temp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',logfile.read()), dtype=np.float64)
+    for line in logfile:
+        if re.match("(.*)DATA(.*)", line):
+            t.write(line)
+    logfile.close()
+
+    # read from tempfile into numpy array for each parameter
+    t.seek(0)
+    temp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',t.read()), dtype=np.float64)
     current.temp = temp[len(temp)-1,1]            # most recent temp
     now = int(temp[len(temp)-1,0])                # in Unix seconds
     # store as Python datetime, in local time, naive format with no real tzinfo set
@@ -62,12 +78,13 @@ def main():
     current.max = np.max(temp[temp[:,0] > (now-86400),1])
     current.min = np.min(temp[temp[:,0] > (now-86400),1])
     print len(temp)
-    logfile.seek(0)
-    pressure = np.asarray(re.findall('(\d+) DATA: P= (\d+) Pa',logfile.read()), dtype=np.float64)
+    t.seek(0)
+    pressure = np.asarray(re.findall('(\d+) DATA: P= (\d+) Pa',t.read()), dtype=np.float64)
     current.pressure = sealevel(pressure[len(pressure)-1,1]/100,h);
     print len(pressure)
-    logfile.seek(0)
-    humid = np.asarray(re.findall('(\d+) DATA: H= (\d+) %',logfile.read()), dtype=np.int)
+    t.seek(0)
+    humid = np.asarray(re.findall('(\d+) DATA: H= (\d+) %',t.read()), dtype=np.int)
+    t.close()
     current.humid = humid[len(humid)-1,1];
     print len(humid)
     # set start time to midnight local time, ndays ago
@@ -196,7 +213,8 @@ def c2f(tempC):
 def sealevel(P,h):
     """Calculate pressure at sea level given altitude of sensor in meters
     From the BMP085 pressure sensor datasheet
-    http://www.bosch-sensortec.com/.../BMP085_DataSheet_Rev.1.0_01July2008.pdf"""
+    http://www.bosch-sensortec.com/content/language1/downloads/BST-BMP085-DS000-05.pdf"""
+
     return P / (1 - h/44330.0)**5.255
 
 if __name__ == '__main__':
