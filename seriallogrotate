@@ -1,0 +1,30 @@
+#!/bin/sh
+#
+# Rotate serial log files
+# Place in /etc/cron.weekly to run automatically (Linux/Unix)
+#
+
+# Kelsey Jordahl
+# Time-stamp: <Thu Jan 27 18:27:15 EST 2011>
+
+LOGDIR="/usr/local/share/logserial";    # path to logfile
+LOGFILE="serial.log";                   # logfile name
+OLDLOGFILE="${LOGFILE}.0";              # old logfile
+
+timestamp=`head -1 ${LOGDIR}/${OLDLOGFILE} | awk '{print $6}'`
+echo $timestamp
+olddate=`date +"%d%b%Y" -d @${timestamp}`
+echo $olddate
+OLDERLOGFILE="${LOGFILE}.${olddate}";              # old logfile
+if [ -f ${LOGDIR}/${OLDERLOGFILE} ]
+then
+    echo "$OLDERLOGFILE exists!  Logfile not rotated."
+    exit 1
+fi
+echo "Stopping serial log daemon..."
+stop logserial
+echo "Rotate log files..."
+mv ${LOGDIR}/${OLDLOGFILE} ${LOGDIR}/${OLDERLOGFILE}
+mv ${LOGDIR}/${LOGFILE} ${LOGDIR}/${OLDLOGFILE}
+echo "Restarting serial log daemon..."
+start logserial

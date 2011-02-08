@@ -1,4 +1,5 @@
-14 August 2010
+README
+Time-stamp: <Mon Feb  7 19:09:03 EST 2011>
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also calculates the dewpoint from current
@@ -45,7 +46,7 @@ or <http://www.gnu.org/licenses/> for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Fri Dec 17 16:55:05 EST 2010>
+Time-stamp: <Mon Feb  7 19:07:37 EST 2011>
 
 CONTENTS:
 README		 This information file
@@ -53,8 +54,35 @@ lacrosse.pde	 Arduino code
 logserial.pl	 example Perl script to log from serial port and add timestamp
 plotweather.py	 python script for plotting and uploading data to website
 template_py.html blank HTML file used as template by plotweather.py
+seriallogrotate  shell script to rotate serial log files (run by cron daemon)
+logserial.conf   file for /etc/init to start logserial.pl automatically
+                 (for upstart daemon used by Ubuntu and Debian Linux distributions)
+
+INSTALL:
+
+Required hardware for this project is an Arduino-compatible platform
+with a 434 MHz RF receiver connected to digital pin 8, a 10k themistor
+on analog pin 1, and a BMP085 pressure sensor connected to analog pins
+4 and 5.  A compatible 434 MHz temperature sensor (e.g., La Crosse
+TX4) is also assumed.  Please see the references above for details for
+details on hooking up these components.
+
+The Arduino sketch lacrosse.pde will, when uploaded to the Arduino,
+send output to the USB serial log of an attached computer.  For
+automatic logging and plotting, use the included files are tested on
+an Ubuntu 10.10 system.  Copy the files logserial.pl, and
+plotweather.py to /usr/local/bin or another directory in your path.
+The HTML template template_py.html should be kept in a directory that
+will be updated with the static web page and plot (e.g. ~/html/weather).
+To run the scripts automatically, copy logserial.conf to /etc/init and
+seriallogrotate to /etc/cron.weekly.  To run the plotting script every
+15 minutes, you may wish to edit your user crontab file to the following:
+1,16,31,46 * * * *  /usr/local/bin/plotweather.py
 
 Changelog:
+
+v1.0.5
+7 Jan 2011: Add files and instructions for automatic logging and plotting
 
 v1.0.4
 15 Dec 2010: change to more robust python script for plotting
