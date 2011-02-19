@@ -2,7 +2,7 @@
                                 ======
 
 Author: Kelsey Jordahl <kels@serrano.local>
-Date: 2011-02-19 14:44:26 EST
+Date: 2011-02-19 15:09:13 EST
 
 
 Introduction 
@@ -11,8 +11,7 @@ Introduction
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also calculates the dewpoint from current
 temperature and relative humidity, and records indoor temperature from
-a thermistor and barometric pressure from an onboard BMP085 pressure
-sensor.  The Arduino does not output the time of measurements, so a
+a thermistor and barometric pressure from an onboard [BMP085 pressure sensor].  The Arduino does not output the time of measurements, so a
 timestamp should be added when the data are logged by a computer.  A
 sample logging script is included.
 
@@ -23,7 +22,7 @@ p0 = p/(1 - altitude/44330)^5.255
 My elevation is 139 m.
 
 This project is based on the [Weather Station Receiver] from the book
-[/Practical Arduino/] by Jon Oxer and Hugh Blemings, and is based on
+[Practical Arduino] by Jon Oxer and Hugh Blemings, and uses
 some of their original code, which may be found at [GitHub].  Further
 help in decoding data packets came from [Jean-Paul Roubelat's page on LaCrosse sensors]. BMP085 pressure sensor code is based on code from
 [Interactive Matter] (used and relicensed under the GPL with
@@ -39,17 +38,18 @@ Lawrence, M., The relationship between relative humidity and the
 More information is at [http://mysite.verizon.net/kajordahl/weather.html].
 
 These programs are released under the GPLv3.  Please see the file COPYING
-or [http://www.gnu.org/licenses/] for details.
+or [http://www.gnu.org/licenses] for details.
 
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Feb 19 14:44:26 EST 2011>
+Time-stamp: <Sat Feb 19 15:09:13 EST 2011>
 
 
+[BMP085 pressure sensor]: http://www.sparkfun.com/products/9694
 [datasheet]: http://www.bosch-sensortec.com/content/language1/downloads/BST-BMP085-DS000-05.pdf
 [Weather Station Receiver]: http://www.practicalarduino.com/projects/weather-station-receiver
-[/Practical Arduino/]: http://www.practicalarduino.com/about
+[Practical Arduino]: http://www.practicalarduino.com/about
 [GitHub]: http://github.com/practicalarduino/WeatherStationReceiver
 [Jean-Paul Roubelat's page on LaCrosse sensors]: http://www.f6fbb.org/domo/sensors/tx3_th.php
 [Interactive Matter]: http://interactive-matter.org/2009/12/arduino-barometric-pressure-sensor-bmp085
@@ -89,12 +89,12 @@ directory that will be updated with the static web page and plot
 copy `logserial.conf' to `/etc/init' and seriallogrotate to
 `/etc/cron.weekly'.  To run the plotting script every 15 minutes, you
 may wish to edit your user crontab file to the following:
-1,16,31,46 * * * *  /usr/local/bin/plotweather.py
+1,16,31,46 * * * *  /usr/local/bin/plotweather.py -u
 
 Changelog 
 ~~~~~~~~~~
 
-v1.0.6 (17 Feb 2011): `plotweather.py' takes optional arguments;
+v1.0.6 (19 Feb 2011): `plotweather.py' takes optional arguments;
      this README file reformatted in Emacs `org-mode'
 v1.0.5 (7 Jan 2011): Add files and instructions for automatic
      logging and plotting
