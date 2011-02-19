@@ -2,7 +2,7 @@
                                 ======
 
 Author: Kelsey Jordahl <kels@serrano.local>
-Date: 2011-02-19 15:09:13 EST
+Date: 2011-02-19 15:15:59 EST
 
 
 Introduction 
@@ -43,7 +43,7 @@ or [http://www.gnu.org/licenses] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Feb 19 15:09:13 EST 2011>
+Time-stamp: <Sat Feb 19 15:15:59 EST 2011>
 
 
 [BMP085 pressure sensor]: http://www.sparkfun.com/products/9694
@@ -78,18 +78,20 @@ on analog pin 1, and a BMP085 pressure sensor connected to analog pins
 TX4) is also assumed.  Please see the references above for details for
 details on hooking up these components.
 
-The Arduino sketch lacrosse.pde will, when uploaded to the Arduino,
-send output to the USB serial log of an attached computer.  For
-automatic logging and plotting, use the included files are tested on
-an Ubuntu 10.10 system.  Copy the files `logserial.pl', and
+The Arduino sketch `lacrosse.pde' will, when uploaded to the Arduino,
+send output to the USB serial port of an attached computer.  For
+automatic logging and plotting, use the included files (which have
+been tested on an Ubuntu 10.10 system).  Copy the files `logserial.pl', and
 `plotweather.py' to `/usr/local/bin' or another directory in your
 path.  The HTML template `template_py.html' should be kept in a
 directory that will be updated with the static web page and plot
 (e.g. `/home/user/html/weather').  To run the scripts automatically,
 copy `logserial.conf' to `/etc/init' and seriallogrotate to
 `/etc/cron.weekly'.  To run the plotting script every 15 minutes, you
-may wish to edit your user crontab file to the following:
+may wish to edit your user `crontab' file to the following:
 1,16,31,46 * * * *  /usr/local/bin/plotweather.py -u
+You will probably need to edit the scripts to the desired paths for
+logging and HTML files on your system.
 
 Changelog 
 ~~~~~~~~~~
