@@ -17,8 +17,7 @@ To plot the default number of days (4) and upload to live website, use:
 To plot 7 days and display the resulting graph (but not upload HTML), use:
 % plotweather.py -d 7 -p
 
-To see all input options, use:
-% plotweather.py -h
+To see all input options, use "plotweather.py -h"
 
 See http://mysite.verizon.net/kajordahl/weather.html
 or http://github.com/kjordahl/Arduino-Weather-Station
@@ -26,7 +25,7 @@ or http://github.com/kjordahl/Arduino-Weather-Station
 Author: Kelsey Jordahl
 Copyright: Kelsey Jordahl 2010-2011
 License: GPLv3
-Time-stamp: <Sat Feb 19 14:43:54 EST 2011>
+Time-stamp: <Tue Mar 15 08:17:47 EDT 2011>
 
     This program is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -46,14 +45,21 @@ import os
 import re
 import argparse
 from datetime import datetime, date, time, tzinfo
-from time import timezone
+#from time import timezone
+import time
 import numpy as np
 from matplotlib import dates, pyplot
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import tempfile
 
-TZ = 'EST'                              # TODO: set DST when appropriate
+# only honors current timezone (plot will not be correct across a DST change)
+if time.daylight:
+    TZ = 'EDT'
+    timezone = time.altzone
+else:
+    TZ = 'EST'
+    timezone = time.timezone
 
 def main(args):
     logfilename = os.path.join(args.logdir,'serial.log')
@@ -83,6 +89,8 @@ def main(args):
     temp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',t.read()), dtype=np.float64)
     current.temp = temp[len(temp)-1,1]            # most recent temp
     now = int(temp[len(temp)-1,0])                # in Unix seconds
+    if args.verbose:
+        print "Timezone offset: %s" % timezone
     # store as Python datetime, in local time, naive format with no real tzinfo set
     current.time = dates.num2date(dates.epoch2num(now-timezone)) 
     current.max = np.max(temp[temp[:,0] > (now-86400),1])
@@ -198,7 +206,7 @@ class Weather(object):
     def report(self):
         """print current weather conditions"""
         #        print 'time', datetime.isoformat(self.time)
-        print self.time.strftime("%a %d %b %Y %H:%M:%S")
+        print self.time.strftime("%a %d %b %Y %H:%M:%S"), TZ
         print 'Temperature: %4.1f deg C, %4.1f deg F' % (self.temp, self.fahrenheit)
         print 'Pressure:', self.pressure, 'mbar'
         print 'Humidity:', self.humid, '% humidity'

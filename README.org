@@ -40,10 +40,11 @@ or [[http://www.gnu.org/licenses]] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Feb 19 15:14:47 EST 2011>
+Time-stamp: <Sat Feb 19 15:18:50 EST 2011>
 
 * CONTENTS
-- ~README~ ::		 This information file
+- ~README.org~ :: This information file
+- ~README.txt~ :: ASCII version exported from ~README.org~
 - ~lacrosse.pde~ :: Arduino code
 - ~logserial.pl~ :: example Perl script to log from serial port and add timestamp
 - ~plotweather.py~ :: python script for plotting and uploading data to website

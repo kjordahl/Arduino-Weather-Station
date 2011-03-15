@@ -1,8 +1,8 @@
                                 README
                                 ======
 
-Author: Kelsey Jordahl <kels@serrano.local>
-Date: 2011-02-19 15:15:59 EST
+Author: Kelsey Jordahl <kels@ancho.local>
+Date: 2011-03-15 08:25:40 EDT
 
 
 Introduction 
@@ -43,7 +43,7 @@ or [http://www.gnu.org/licenses] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Feb 19 15:15:59 EST 2011>
+Time-stamp: <Tue Mar 15 08:25:40 EDT 2011>
 
 
 [BMP085 pressure sensor]: http://www.sparkfun.com/products/9694
@@ -57,7 +57,8 @@ Time-stamp: <Sat Feb 19 15:15:59 EST 2011>
 
 CONTENTS 
 ~~~~~~~~~
-`README':            This information file
+`README.org': This information file
+`README.txt': ASCII version exported from `README.org'
 `lacrosse.pde': Arduino code
 `logserial.pl': example Perl script to log from serial port and add timestamp
 `plotweather.py': python script for plotting and uploading data to website
