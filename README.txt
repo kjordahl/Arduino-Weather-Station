@@ -1,12 +1,12 @@
                                 README
                                 ======
 
-Author: Kelsey Jordahl <kels@ancho.local>
-Date: 2011-03-15 08:25:40 EDT
+Author: Kelsey Jordahl
+Date: 2011-04-03 18:25:59 EDT
 
 
 Introduction 
-~~~~~~~~~~~~~
+-------------
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also calculates the dewpoint from current
@@ -35,7 +35,7 @@ Lawrence, M., The relationship between relative humidity and the
    applications, /Bulletin of the American Meteorological Society/,
    *86*, 225--233, [doi:10.1175/BAMS-86-2-225], 2005
 
-More information is at [http://mysite.verizon.net/kajordahl/weather.html].
+More information is at [http://kjordahl.net/weather.html].
 
 These programs are released under the GPLv3.  Please see the file COPYING
 or [http://www.gnu.org/licenses] for details.
@@ -43,7 +43,7 @@ or [http://www.gnu.org/licenses] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Tue Mar 15 08:25:40 EDT 2011>
+Time-stamp: <Sun Apr  3 18:25:59 EDT 2011>
 
 
 [BMP085 pressure sensor]: http://www.sparkfun.com/products/9694
@@ -56,21 +56,21 @@ Time-stamp: <Tue Mar 15 08:25:40 EDT 2011>
 [doi:10.1175/BAMS-86-2-225]: http://dx.doi.org/10.1175/BAMS-86-2-225
 
 CONTENTS 
-~~~~~~~~~
-`README.org': This information file
-`README.txt': ASCII version exported from `README.org'
-`lacrosse.pde': Arduino code
-`logserial.pl': example Perl script to log from serial port and add timestamp
-`plotweather.py': python script for plotting and uploading data to website
-`template_py.html': blank HTML file used as template by `plotweather.py'
-`seriallogrotate': shell script to rotate serial log files (run by
-     `cron' daemon)
-`logserial.conf': file for `/etc/init' to start `logserial.pl'
+---------
+~README.org~: This information file
+~README.txt~: ASCII version exported from ~README.org~
+~lacrosse.pde~: Arduino code
+~logserial.pl~: example Perl script to log from serial port and add timestamp
+~plotweather.py~: python script for plotting and uploading data to website
+~template_py.html~: blank HTML file used as template by ~plotweather.py~
+~seriallogrotate~: shell script to rotate serial log files (run by
+     ~cron~ daemon)
+~logserial.conf~: file for ~/etc/init~ to start ~logserial.pl~
                     automatically (for upstart daemon used by Ubuntu
                     and Debian Linux distributions)
 
 INSTALL 
-~~~~~~~~
+--------
 
 Required hardware for this project is an Arduino-compatible platform
 with a 434 MHz RF receiver connected to digital pin 8, a 10k themistor
@@ -79,26 +79,26 @@ on analog pin 1, and a BMP085 pressure sensor connected to analog pins
 TX4) is also assumed.  Please see the references above for details for
 details on hooking up these components.
 
-The Arduino sketch `lacrosse.pde' will, when uploaded to the Arduino,
+The Arduino sketch ~lacrosse.pde~ will, when uploaded to the Arduino,
 send output to the USB serial port of an attached computer.  For
 automatic logging and plotting, use the included files (which have
-been tested on an Ubuntu 10.10 system).  Copy the files `logserial.pl', and
-`plotweather.py' to `/usr/local/bin' or another directory in your
-path.  The HTML template `template_py.html' should be kept in a
+been tested on an Ubuntu 10.10 system).  Copy the files ~logserial.pl~, and
+~plotweather.py~ to ~/usr/local/bin~ or another directory in your
+path.  The HTML template ~template_py.html~ should be kept in a
 directory that will be updated with the static web page and plot
-(e.g. `/home/user/html/weather').  To run the scripts automatically,
-copy `logserial.conf' to `/etc/init' and seriallogrotate to
-`/etc/cron.weekly'.  To run the plotting script every 15 minutes, you
-may wish to edit your user `crontab' file to the following:
+(e.g. ~/home/user/html/weather~).  To run the scripts automatically,
+copy ~logserial.conf~ to ~/etc/init~ and seriallogrotate to
+~/etc/cron.weekly~.  To run the plotting script every 15 minutes, you
+may wish to edit your user ~crontab~ file to the following:
 1,16,31,46 * * * *  /usr/local/bin/plotweather.py -u
 You will probably need to edit the scripts to the desired paths for
 logging and HTML files on your system.
 
 Changelog 
-~~~~~~~~~~
+----------
 
-v1.0.6 (19 Feb 2011): `plotweather.py' takes optional arguments;
-     this README file reformatted in Emacs `org-mode'
+v1.0.6 (19 Feb 2011): ~plotweather.py~ takes optional arguments;
+     this README file reformatted in Emacs ~org-mode~
 v1.0.5 (7 Jan 2011): Add files and instructions for automatic
      logging and plotting
 v1.0.4 (15 Dec 2010): change to more robust python script for plotting

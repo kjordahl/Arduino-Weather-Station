@@ -32,7 +32,7 @@ Lawrence, M., The relationship between relative humidity and the
    applications, /Bulletin of the American Meteorological Society/,
    *86*, 225--233, [[http://dx.doi.org/10.1175/BAMS-86-2-225][doi:10.1175/BAMS-86-2-225]], 2005
 
-More information is at [[http://mysite.verizon.net/kajordahl/weather.html]].
+More information is at [[http://kjordahl.net/weather.html]].
 
 These programs are released under the GPLv3.  Please see the file COPYING
 or [[http://www.gnu.org/licenses]] for details.
@@ -40,7 +40,7 @@ or [[http://www.gnu.org/licenses]] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Feb 19 15:18:50 EST 2011>
+Time-stamp: <Sun Apr  3 18:25:35 EDT 2011>
 
 * CONTENTS
 - ~README.org~ :: This information file
