@@ -6,10 +6,10 @@
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also calculates the dewpoint from current
 temperature and relative humidity, and records indoor temperature from
-a thermistor and barometric pressure from an onboard [[http://www.sparkfun.com/products/9694][BMP085 pressure
-sensor]].  The Arduino does not output the time of measurements, so a
-timestamp should be added when the data are logged by a computer.  A
-sample logging script is included.
+a [[http://www.maxim-ic.com/datasheet/index.mvp/id/3241][DS1631 digital sensor]] and barometric pressure from an onboard [[http://www.sparkfun.com/products/9694][BMP085
+pressure sensor]].  The Arduino does not output the time of
+measurements, so a timestamp should be added when the data are logged
+by a computer.  A sample logging script is included.
 
 Pressure is reduced in the plotting script to sea level using the
 equation given in the BMP085 [[http://www.bosch-sensortec.com/content/language1/downloads/BST-BMP085-DS000-05.pdf][datasheet]]:
@@ -40,7 +40,7 @@ or [[http://www.gnu.org/licenses]] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sun Apr  3 18:25:35 EDT 2011>
+Time-stamp: <Sat Jun 25 12:50:38 EDT 2011>
 
 * CONTENTS
 - ~README.org~ :: This information file
@@ -81,6 +81,7 @@ logging and HTML files on your system.
 
 * Changelog
 
+- v1.1 (25 Apr 2011) :: Swap indoor temperature sensor to DS1631
 - v1.0.6 (19 Feb 2011) :: ~plotweather.py~ takes optional arguments;
      this README file reformatted in Emacs ~org-mode~
 - v1.0.5 (7 Jan 2011) :: Add files and instructions for automatic

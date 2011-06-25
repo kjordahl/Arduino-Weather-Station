@@ -1,18 +1,17 @@
 /* Name: lacrosse.pde
- * Version: 1.0
+ * Version: 1.1
  * Author: Kelsey Jordahl
  * Copyright: Kelsey Jordahl 2010
    (portions copyright Marc Alexander, Jonathan Oxer 2009;
     Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Mon Sep 13 15:22:10 EDT 2010> 
+ * Time-stamp: <Sat Jun 25 12:47:25 EDT 2011> 
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
-two on-board sensors, a BMP085 and a thermistor.  Assumes the 433 MHz
-data pin is connected to Digital Pin 8 (PB0).  Analog pins 0 and 1 are
-used for the temperature sensors, set in the define statements below.
-Analog pins 4 and 5 are used for I2C communication with BMP085.
+two on-board I2C sensors, a BMP085 and a DS1631.  Assumes the 433 MHz
+data pin is connected to Digital Pin 8 (PB0).  Analog pins 4 and 5 are
+used for I2C communication with pressure and temperature sensors.
 
 Based on idea, and some code, from Practical Arduino
  http://www.practicalarduino.com/projects/weather-station-receiver
@@ -32,7 +31,13 @@ BMP085 pressure sensor:
   see also:
  http://news.jeelabs.org/2009/02/19/hooking-up-a-bmp085-sensor
 
-Thermistor:
+DS1631 temperature sensor:
+ Maxim digital temperature sensor with I2C interface in DIP-8 package
+ http://www.maxim-ic.com/datasheet/index.mvp/id/3241
+  see also:
+ http://kennethfinnegan.blogspot.com/2009/10/arduino-temperature-logger.html
+
+Thermistor (no longer used):
  Vishay 10 kOhm NTC thermistor
  part no: NTCLE100E3103GB0
  <http://www.vishay.com/thermistors/list/product-29049>
@@ -67,7 +72,7 @@ LM61 (no longer used):
 
 // Comment out for a normal build
 // Uncomment for a debug build
-//#define DEBUG
+#define DEBUG
 
 #define INPUT_CAPTURE_IS_RISING_EDGE()    ((TCCR1B & _BV(ICES1)) != 0)
 #define INPUT_CAPTURE_IS_FALLING_EDGE()   ((TCCR1B & _BV(ICES1)) == 0)
@@ -78,8 +83,13 @@ LM61 (no longer used):
 // I reversed the red - did I flip the LED from the schematic?
 #define RED_TESTLED_OFF()            ((PORTD &= ~(1<<PORTD7)))
 #define RED_TESTLED_ON()           ((PORTD |=  (1<<PORTD7)))
-#define I2C_ADDRESS 0x77
+#define BMP085_ADDRESS 0x77	/* I2C address of BMP085 pressure sensor */
+#define DS1631_ADDRESS 0x48	/* I2C address of DS1631 temp sensor */
 #define MAXTICK 6009	 /* about 60 s interval for pressure sampling */
+
+// DS1631 command codes
+#define STARTTEMP 0x51
+#define READTEMP 0xAA
 
 /* serial port communication (via USB) */
 #define BAUD_RATE 9600
@@ -109,7 +119,7 @@ LM61 (no longer used):
 /* MacBook voltage */
 //#define VCC 5.05		/* supply voltage on USB */
 //#define LM61PIN 0		/* analog pin for LM61 sensor */
-#define THERMPIN 1		/* analog pin for thermistor */
+//#define THERMPIN 1		/* analog pin for thermistor */
 
 const unsigned char oversampling_setting = 3; //oversampling for measurement
 const unsigned char pressure_waittime[4] = { 5, 8, 14, 26 };
@@ -309,6 +319,11 @@ void setup() {
   Serial.println( "La Crosse weather station capture begin" );
   Wire.begin();
   bmp085_get_cal_data();
+  // initialize the DS1631 temperature sensor
+  Wire.beginTransmission(DS1631_ADDRESS);
+  Wire.send(STARTTEMP);
+  Wire.endTransmission();
+
   cli();
   DDRB = 0x2F;   // B00101111
   DDRB  &= ~(1<<DDB0);    //PBO(ICP1) input
@@ -347,7 +362,7 @@ void loop() {
     timerflag = false;
     interval=millis() - starttime; /* measure time since last sample */
     starttime = millis();
-    PrintIndoor();		/* get thermistor temp */
+    PrintIndoor();		/* get DS1631 temp */
     bmp085_read_temperature_and_pressure(&temperature,&pressure);
     Serial.print("ELAPSED MS= ");
     Serial.println(interval,DEC);
@@ -430,22 +445,27 @@ void ParsePacket(byte *Packet) {
 }
 
 // send indoor temperature to serial port
-void PrintIndoor(void) {
-  /* read from LM61 */
-/*       Serial.print("INDOOR1: "); */
-/*       Serial.print(lm61(analogRead(LM61PIN)),1); */
-/*       Serial.println(" deg C (LM61)"); */
-  /* read from thermistor */
-      Serial.print("INDOOR: ");
-      Serial.print(Thermistor(analogRead(THERMPIN)),1); 
-      Serial.println(" deg C (thermistor)");
+void PrintIndoor() {
+  byte temp[2];
+  Wire.beginTransmission(DS1631_ADDRESS);
+  Wire.send(READTEMP);
+  Wire.endTransmission();
+  Wire.requestFrom(DS1631_ADDRESS, 2);
+  temp[0] = Wire.receive(); // MSB
+  temp[1] = Wire.receive(); // LSB
+
+  Serial.print("INDOOR: ");
+  Serial.print(temp[0], DEC);
+  Serial.print(".");
+  Serial.print(temp[1] / 25, DEC); // fractional degree
+  Serial.println(" deg C (DS1631)");
 }
 
 void bmp085_read_temperature_and_pressure(int* temperature, long* pressure) {
   long ut= bmp085_read_ut();
   long up = bmp085_read_up();
-   long x1, x2, x3, b3, b5, b6, p;
-   unsigned long b4, b7;
+  long x1, x2, x3, b3, b5, b6, p;
+  unsigned long b4, b7;
 
    //calculate the temperature
    x1 = ((long)ut - ac6) * ac5 >> 15;
@@ -527,11 +547,11 @@ long bmp085_read_up() {
   delay(pressure_waittime[oversampling_setting]);
   
   unsigned char msb, lsb, xlsb;
-  Wire.beginTransmission(I2C_ADDRESS);
+  Wire.beginTransmission(BMP085_ADDRESS);
   Wire.send(0xf6);  // register to read
   Wire.endTransmission();
 
-  Wire.requestFrom(I2C_ADDRESS, 3); // read a byte
+  Wire.requestFrom(BMP085_ADDRESS, 3); // read a byte
   while(!Wire.available()) {
     // waiting
   }
@@ -549,7 +569,7 @@ long bmp085_read_up() {
 
 void write_register(unsigned char r, unsigned char v)
 {
-  Wire.beginTransmission(I2C_ADDRESS);
+  Wire.beginTransmission(BMP085_ADDRESS);
   Wire.send(r);
   Wire.send(v);
   Wire.endTransmission();
@@ -558,11 +578,11 @@ void write_register(unsigned char r, unsigned char v)
 char read_register(unsigned char r)
 {
   unsigned char v;
-  Wire.beginTransmission(I2C_ADDRESS);
+  Wire.beginTransmission(BMP085_ADDRESS);
   Wire.send(r);  // register to read
   Wire.endTransmission();
 
-  Wire.requestFrom(I2C_ADDRESS, 1); // read a byte
+  Wire.requestFrom(BMP085_ADDRESS, 1); // read a byte
   while(!Wire.available()) {
     // waiting
   }
@@ -573,11 +593,11 @@ char read_register(unsigned char r)
 int read_int_register(unsigned char r)
 {
   unsigned char msb, lsb;
-  Wire.beginTransmission(I2C_ADDRESS);
+  Wire.beginTransmission(BMP085_ADDRESS);
   Wire.send(r);  // register to read
   Wire.endTransmission();
 
-  Wire.requestFrom(I2C_ADDRESS, 2); // read a byte
+  Wire.requestFrom(BMP085_ADDRESS, 2); // read a byte
   while(!Wire.available()) {
     // waiting
   }
