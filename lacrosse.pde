@@ -5,7 +5,7 @@
    (portions copyright Marc Alexander, Jonathan Oxer 2009;
     Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Sat Jun 25 12:47:25 EDT 2011> 
+ * Time-stamp: <Mon Jun 27 12:02:27 EDT 2011> 
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
@@ -72,7 +72,7 @@ LM61 (no longer used):
 
 // Comment out for a normal build
 // Uncomment for a debug build
-#define DEBUG
+//#define DEBUG
 
 #define INPUT_CAPTURE_IS_RISING_EDGE()    ((TCCR1B & _BV(ICES1)) != 0)
 #define INPUT_CAPTURE_IS_FALLING_EDGE()   ((TCCR1B & _BV(ICES1)) == 0)
@@ -107,11 +107,12 @@ LM61 (no longer used):
 #define MIN_WAIT 225		// minimum interval since end of last bit
 #define MAX_WAIT 275		// maximum interval since end of last bit
 
-/* constants for extended Steinhart-Hart equation from thermistor datasheet */
+/* constants for extended Steinhart-Hart equation from thermistor datasheet
 #define A 3.354016E-03
 #define B 2.569850E-04
 #define C 2.620131E-06
 #define D 6.383091E-08
+*/
 
 /* ADC depends on reference voltage.  Could tie this to internal 1.05 V? */
 /* Linux machine voltage */
@@ -288,24 +289,6 @@ ISR( TIMER1_CAPT_vect )
   //GREEN test led off (flicker for debug)
   GREEN_TESTLED_OFF();
 }
-
-float Thermistor(int RawADC) {
-  float Temp;
-  Temp = log(((1024/float(RawADC)) - 1)); /* relative to 10 kOhm */
-  Temp = 1 / (A + (B * Temp) + (C * Temp * Temp) + (D * Temp * Temp * Temp));
-  Temp = Temp - 273.15;		/* convert to C */
-  // Temp = (Temp * 9.0)/ 5.0 + 32.0; // Convert Celcius to Fahrenheit
-  return Temp;
-}
-
-// not currently used
-/*
-float lm61(int RawADC) {
-  float Temp;
-  float voltage = RawADC * VCC / 1024; 
-  Temp = (voltage - 0.6) * 100 ;  //10 mV/degree with 600 mV offset
-  return Temp;
-} */
 
 float dewpoint(float T, float h) {
   float td;
