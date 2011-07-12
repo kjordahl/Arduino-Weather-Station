@@ -25,7 +25,7 @@ or http://github.com/kjordahl/Arduino-Weather-Station
 Author: Kelsey Jordahl
 Copyright: Kelsey Jordahl 2010-2011
 License: GPLv3
-Time-stamp: <Tue Mar 15 08:17:47 EDT 2011>
+Time-stamp: <Tue Jul 12 13:20:51 EDT 2011>
 
     This program is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -41,7 +41,7 @@ Time-stamp: <Tue Mar 15 08:17:47 EDT 2011>
 
 """
 
-import os
+import os, sys
 import re
 import argparse
 from datetime import datetime, date, time, tzinfo
@@ -53,6 +53,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import tempfile
 
+MINTEMP = -40.0                           # minimum valid temperature (deg C)
 # only honors current timezone (plot will not be correct across a DST change)
 if time.daylight:
     TZ = 'EDT'
@@ -86,7 +87,9 @@ def main(args):
 
     # read from tempfile into numpy array for each parameter
     t.seek(0)
-    temp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',t.read()), dtype=np.float64)
+    temptemp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',t.read()), dtype=np.float64)
+    #temptemp[np.where(temptemp<MINTEMP)] = np.nan
+    temp = np.ma.masked_less(temptemp, MINTEMP)
     current.temp = temp[len(temp)-1,1]            # most recent temp
     now = int(temp[len(temp)-1,0])                # in Unix seconds
     if args.verbose:
@@ -224,19 +227,17 @@ def datelabels(ax):
 def save_html(c):
     """Update static HTML file with current weather data"""
     templatefile = os.path.join(args.outdir,'template_py.html')
-    jsfile = os.path.join(args.outdir,'javascript.html')
     outfile = os.path.join(args.outdir,'current.html')
     html = open(templatefile,'r')
     lines = html.read()
-    # if javascript file exists, it will be inserted into template
-    if os.path.exists(jsfile):
-        j = open(jsfile,'r')
-        javascript = j.read()
-    else:
-        javascript = ""
     # print lines
     out = open(outfile,'w')
-    out.write(lines % (c.time.strftime("%a %d %b %Y %H:%M:%S " + TZ), c.fahrenheit, c2f(c.max), c2f(c.min), c.humid, c2f(c.dewpoint), c.pressure, javascript))
+    try:
+        out.write(lines % (c.time.strftime("%a %d %b %Y %H:%M:%S " + TZ), c.fahrenheit, c2f(c.max), c2f(c.min), c.humid, c2f(c.dewpoint), c.pressure))
+    except:
+        exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
+        print exceptionType
+        print exceptionValue
     out.close()
 
 def c2f(tempC):
