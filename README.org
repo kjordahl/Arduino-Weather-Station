@@ -40,18 +40,18 @@ or [[http://www.gnu.org/licenses]] for details.
 Kelsey Jordahl
 kjordahl@alum.mit.edu
 
-Time-stamp: <Sat Jun 25 12:50:38 EDT 2011>
+Time-stamp: <Sun Feb 19 14:15:26 EST 2012>
 
 * CONTENTS
 - ~README.org~ :: This information file
 - ~README.txt~ :: ASCII version exported from ~README.org~
 - ~lacrosse.pde~ :: Arduino code
-- ~logserial.pl~ :: example Perl script to log from serial port and add timestamp
+- ~logserial.py~ :: Simple python script to log from serial port and add timestamp
 - ~plotweather.py~ :: python script for plotting and uploading data to website
 - ~template_py.html~ :: blank HTML file used as template by ~plotweather.py~
 - ~seriallogrotate~ :: shell script to rotate serial log files (run by
      ~cron~ daemon)
-- ~logserial.conf~ :: file for ~/etc/init~ to start ~logserial.pl~
+- ~logserial.conf~ :: file for ~/etc/init~ to start ~logserial.py~
                     automatically (for upstart daemon used by Ubuntu
                     and Debian Linux distributions)
 
@@ -67,7 +67,7 @@ details on hooking up these components.
 The Arduino sketch ~lacrosse.pde~ will, when uploaded to the Arduino,
 send output to the USB serial port of an attached computer.  For
 automatic logging and plotting, use the included files (which have
-been tested on an Ubuntu 10.10 system).  Copy the files ~logserial.pl~, and
+been tested on an Ubuntu 10.10 system).  Copy the files ~logserial.py~, and
 ~plotweather.py~ to ~/usr/local/bin~ or another directory in your
 path.  The HTML template ~template_py.html~ should be kept in a
 directory that will be updated with the static web page and plot
@@ -81,6 +81,7 @@ logging and HTML files on your system.
 
 * Changelog
 
+- v1.1.1 (19 Feb 2012) :: Update logging script
 - v1.1 (25 Apr 2011) :: Swap indoor temperature sensor to DS1631
 - v1.0.6 (19 Feb 2011) :: ~plotweather.py~ takes optional arguments;
      this README file reformatted in Emacs ~org-mode~
