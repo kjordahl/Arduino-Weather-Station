@@ -25,7 +25,7 @@ or http://github.com/kjordahl/Arduino-Weather-Station
 Author: Kelsey Jordahl
 Copyright: Kelsey Jordahl 2010-2011
 License: GPLv3
-Time-stamp: <Tue Jul 12 13:20:51 EDT 2011>
+Time-stamp: <Sun Mar  4 22:01:53 EST 2012>
 
     This program is free software: you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -53,14 +53,84 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import tempfile
 
-MINTEMP = -40.0                           # minimum valid temperature (deg C)
-# only honors current timezone (plot will not be correct across a DST change)
-if time.daylight:
-    TZ = 'EDT'
-    timezone = time.altzone
-else:
-    TZ = 'EST'
-    timezone = time.timezone
+
+class Weather(object):
+    """Class to hold weather data.
+    """
+
+    def __init__(self):
+        self.temp = None
+        self.time = None
+        self.humid = None
+        self.pressure = None
+        self.max = None
+        self.min = None
+        self.MINTEMP = -40.0       # minimum valid temperature (deg C)
+        # only honors current timezone (plot will not be correct across a DST change)
+        self.timezone = time.timezone
+        self.TZ = time.strftime('%Z', time.localtime())
+
+    @property
+    def dewpoint(self):
+        """Simplified dewpoint formula from Lawrence (2005),
+        doi:10.1175/BAMS-86-2-225
+        """
+        if self.humid and self.temp:
+            dp = self.temp - (100 - self.humid)*((self.temp + 273.15)/300)**2 / 5 - 0.00135*(self.humid - 84)**2 + 0.35
+            return dp
+        else:
+            return None
+
+    @property
+    def fahrenheit(self):
+        """Convert to degrees Fahrenheit"""
+        if self.temp:
+            return c2f(self.temp)
+
+    def report(self):
+        """print current weather conditions"""
+        #        print 'time', datetime.isoformat(self.time)
+        print self.time.strftime("%a %d %b %Y %H:%M:%S"), self.TZ
+        print 'Temperature: %4.1f deg C, %4.1f deg F' % (self.temp, self.fahrenheit)
+        print 'Pressure:', self.pressure, 'mbar'
+        print 'Humidity:', self.humid, '% humidity'
+        print 'Dewpoint: %4.1f deg C, %4.1f deg F' % (self.dewpoint, c2f(self.dewpoint))
+
+    def save_html(self):
+        """Update static HTML file with current weather data"""
+        templatefile = os.path.join(args.outdir,'template_py.html')
+        outfile = os.path.join(args.outdir,'current.html')
+        html = open(templatefile,'r')
+        lines = html.read()
+        # print lines
+        out = open(outfile,'w')
+        try:
+            out.write(lines % (self.time.strftime("%a %d %b %Y %H:%M:%S " + self.TZ), self.fahrenheit, c2f(self.max), c2f(self.min), self.humid, c2f(self.dewpoint), self.pressure))
+        except:
+            exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
+            print exceptionType
+            print exceptionValue
+        out.close()
+
+
+def datelabels(ax):
+    ax.xaxis.set_major_locator(
+        dates.DayLocator()
+        )
+    ax.xaxis.set_major_formatter(
+        dates.DateFormatter('%d %b')
+        )
+
+
+def c2f(tempC):
+    """Celcius to Fahrenheit degrees conversion"""
+    return tempC * 9/5 + 32
+
+def sealevel(P,h):
+    """Calculate pressure at sea level given altitude of sensor in meters
+    From the BMP085 pressure sensor datasheet
+    http://www.bosch-sensortec.com/content/language1/downloads/BST-BMP085-DS000-05.pdf"""
+    return P / (1 - h/44330.0)**5.255
 
 def main(args):
     logfilename = os.path.join(args.logdir,'serial.log')
@@ -89,13 +159,13 @@ def main(args):
     t.seek(0)
     temptemp = np.asarray(re.findall('(\d+) DATA: T= (.+) degC',t.read()), dtype=np.float64)
     #temptemp[np.where(temptemp<MINTEMP)] = np.nan
-    temp = np.ma.masked_less(temptemp, MINTEMP)
+    temp = np.ma.masked_less(temptemp, current.MINTEMP)
     current.temp = temp[len(temp)-1,1]            # most recent temp
     now = int(temp[len(temp)-1,0])                # in Unix seconds
     if args.verbose:
-        print "Timezone offset: %s" % timezone
+        print "Timezone offset: %s" % current.timezone
     # store as Python datetime, in local time, naive format with no real tzinfo set
-    current.time = dates.num2date(dates.epoch2num(now-timezone)) 
+    current.time = dates.num2date(dates.epoch2num(now-current.timezone)) 
     current.max = np.max(temp[temp[:,0] > (now-86400),1])
     current.min = np.min(temp[temp[:,0] > (now-86400),1])
     if args.verbose:
@@ -112,7 +182,7 @@ def main(args):
     if args.verbose:
         print "Humidity records: %s" % len(humid)
     # set start time to midnight local time, # of days ago specified
-    start = (np.floor((now-timezone)/86400.0) - args.days)*86400 + timezone
+    start = (np.floor((now-current.timezone)/86400.0) - args.days)*86400 + current.timezone
     if args.verbose:
         print "Current timestamp: %s" % now
     if args.verbose:
@@ -124,29 +194,42 @@ def main(args):
     if args.verbose:
         print "First actual timestamp: %s" % m
     current.report()
-    save_html(current)
+    current.save_html()
     fig = Figure(figsize=(8,8))
+    # ensure that all 3 plots are on same x-axis
+    end = (np.floor((now)/86400.0) + 1)*86400
+    if args.verbose:
+        print "last plot time: %f, %s" % (end, time.strftime("%a %d %b %Y %H:%M:%S",time.gmtime(end)))
+    xlim=(dates.epoch2num(start - current.timezone),dates.epoch2num(end))
+
+    # Temperature plot
     ax = fig.add_subplot(311)
-    ax.plot(dates.epoch2num(temp[:,0]-timezone),temp[:,1])
+    ax.plot(dates.epoch2num(temp[:,0]-current.timezone),temp[:,1])
+    ax.set_xlim(xlim)
     ax.set_ylabel(u'Temp (°C)')
     ax2 = ax.twinx()
     clim = pyplot.get(ax,'ylim')
     ax2.set_ylim(c2f(clim[0]),c2f(clim[1]))
     datelabels(ax)
     ax2.set_ylabel(u'Temp (°F)')
-    
+
+    # Humidity plot
     ax = fig.add_subplot(312)
-    ax.plot(dates.epoch2num(humid[:,0]-timezone),humid[:,1],'-')
+    ax.plot(dates.epoch2num(humid[:,0]-current.timezone),humid[:,1],'-')
+    ax.set_xlim(xlim)
     ax.set_ylim(0,100)
     ax.set_ylabel('Humidity (%)')
     ax2 = ax.twinx()
     ax2.set_ylim(0,100)
     datelabels(ax)
     ax2.set_ylabel('Humidity (%)')
+
+    # Pressure plot
     ax = fig.add_subplot(313)
-    ax.plot(dates.epoch2num(pressure[:,0]-timezone),sealevel(pressure[:,1],h)/100,'-')
+    ax.plot(dates.epoch2num(pressure[:,0]-current.timezone),sealevel(pressure[:,1],h)/100,'-')
+    ax.set_xlim(xlim)
     ax.set_ylabel('Pressure (mbar)')
-    ax.set_xlabel('local time (%s)' % TZ)
+    ax.set_xlabel('local time (%s)' % current.TZ)
     ax2 = ax.twinx()
     clim = pyplot.get(ax,'ylim')
     ax2.set_ylim(clim[0]*0.02954,clim[1]*0.02954)
@@ -176,79 +259,6 @@ def main(args):
         # os.system("open %s" % os.path.join(args.outdir,'plot.png'))
         
 # end main()
-
-class Weather(object):
-    """Class to hold weather data.
-    """
-
-    def __init__(self):
-        self.temp = None
-        self.time = None
-        self.humid = None
-        self.pressure = None
-        self.max = None
-        self.min = None
-
-    @property
-    def dewpoint(self):
-        """Simplified dewpoint formula from Lawrence (2005),
-        doi:10.1175/BAMS-86-2-225
-        """
-        if self.humid and self.temp:
-            dp = self.temp - (100 - self.humid)*((self.temp + 273.15)/300)**2 / 5 - 0.00135*(self.humid - 84)**2 + 0.35
-            return dp
-        else:
-            return None
-
-    @property
-    def fahrenheit(self):
-        """Convert to degrees Fahrenheit"""
-        if self.temp:
-            return c2f(self.temp)
-
-    def report(self):
-        """print current weather conditions"""
-        #        print 'time', datetime.isoformat(self.time)
-        print self.time.strftime("%a %d %b %Y %H:%M:%S"), TZ
-        print 'Temperature: %4.1f deg C, %4.1f deg F' % (self.temp, self.fahrenheit)
-        print 'Pressure:', self.pressure, 'mbar'
-        print 'Humidity:', self.humid, '% humidity'
-        print 'Dewpoint: %4.1f deg C, %4.1f deg F' % (self.dewpoint, c2f(self.dewpoint))
-
-def datelabels(ax):
-    ax.xaxis.set_major_locator(
-        dates.DayLocator()
-        )
-    ax.xaxis.set_major_formatter(
-        dates.DateFormatter('%d %b')
-        )
-
-# this could be a method in Weather class instead
-def save_html(c):
-    """Update static HTML file with current weather data"""
-    templatefile = os.path.join(args.outdir,'template_py.html')
-    outfile = os.path.join(args.outdir,'current.html')
-    html = open(templatefile,'r')
-    lines = html.read()
-    # print lines
-    out = open(outfile,'w')
-    try:
-        out.write(lines % (c.time.strftime("%a %d %b %Y %H:%M:%S " + TZ), c.fahrenheit, c2f(c.max), c2f(c.min), c.humid, c2f(c.dewpoint), c.pressure))
-    except:
-        exceptionType, exceptionValue, exceptionTraceback = sys.exc_info()
-        print exceptionType
-        print exceptionValue
-    out.close()
-
-def c2f(tempC):
-    """Celcius to Fahrenheit degrees conversion"""
-    return tempC * 9/5 + 32
-
-def sealevel(P,h):
-    """Calculate pressure at sea level given altitude of sensor in meters
-    From the BMP085 pressure sensor datasheet
-    http://www.bosch-sensortec.com/content/language1/downloads/BST-BMP085-DS000-05.pdf"""
-    return P / (1 - h/44330.0)**5.255
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Plot weather record')
