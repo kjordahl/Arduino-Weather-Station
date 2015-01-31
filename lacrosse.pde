@@ -102,10 +102,10 @@ LM61 (no longer used):
 #define MAX_ONE 155		// maximum length of '1'
 // 1.3 ms high is a zero
 #define MIN_ZERO 335		// minimum length of '0'
-#define MAX_ZERO 370		// maximum length of '0'
+#define MAX_ZERO 400		// maximum length of '0'
 // 1 ms between bits
 #define MIN_WAIT 225		// minimum interval since end of last bit
-#define MAX_WAIT 275		// maximum interval since end of last bit
+#define MAX_WAIT 300		// maximum interval since end of last bit
 
 /* constants for extended Steinhart-Hart equation from thermistor datasheet
 #define A 3.354016E-03
