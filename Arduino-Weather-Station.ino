@@ -304,7 +304,7 @@ void setup() {
   bmp085_get_cal_data();
   // initialize the DS1631 temperature sensor
   Wire.beginTransmission(DS1631_ADDRESS);
-  Wire.send(STARTTEMP);
+  Wire.write(STARTTEMP);
   Wire.endTransmission();
 
   cli();
@@ -431,7 +431,7 @@ void ParsePacket(byte *Packet) {
 void PrintIndoor() {
   byte temp[2];
   Wire.beginTransmission(DS1631_ADDRESS);
-  Wire.send(READTEMP);
+  Wire.write(READTEMP);
   Wire.endTransmission();
   Wire.requestFrom(DS1631_ADDRESS, 2);
   temp[0] = Wire.receive(); // MSB
@@ -531,30 +531,30 @@ long bmp085_read_up() {
   
   unsigned char msb, lsb, xlsb;
   Wire.beginTransmission(BMP085_ADDRESS);
-  Wire.send(0xf6);  // register to read
+  Wire.write(0xf6);  // register to read
   Wire.endTransmission();
 
   Wire.requestFrom(BMP085_ADDRESS, 3); // read a byte
   while(!Wire.available()) {
     // waiting
   }
-  msb = Wire.receive();
+  msb = Wire.read();
   while(!Wire.available()) {
     // waiting
   }
-  lsb |= Wire.receive();
+  lsb |= Wire.read();
   while(!Wire.available()) {
     // waiting
   }
-  xlsb |= Wire.receive();
+  xlsb |= Wire.read();
   return (((long)msb<<16) | ((long)lsb<<8) | ((long)xlsb)) >>(8-oversampling_setting);
 }
 
 void write_register(unsigned char r, unsigned char v)
 {
   Wire.beginTransmission(BMP085_ADDRESS);
-  Wire.send(r);
-  Wire.send(v);
+  Wire.write(r);
+  Wire.write(v);
   Wire.endTransmission();
 }
 
@@ -562,14 +562,14 @@ char read_register(unsigned char r)
 {
   unsigned char v;
   Wire.beginTransmission(BMP085_ADDRESS);
-  Wire.send(r);  // register to read
+  Wire.write(r);  // register to read
   Wire.endTransmission();
 
   Wire.requestFrom(BMP085_ADDRESS, 1); // read a byte
   while(!Wire.available()) {
     // waiting
   }
-  v = Wire.receive();
+  v = Wire.read();
   return v;
 }
 
@@ -577,17 +577,17 @@ int read_int_register(unsigned char r)
 {
   unsigned char msb, lsb;
   Wire.beginTransmission(BMP085_ADDRESS);
-  Wire.send(r);  // register to read
+  Wire.write(r);  // register to read
   Wire.endTransmission();
 
   Wire.requestFrom(BMP085_ADDRESS, 2); // read a byte
   while(!Wire.available()) {
     // waiting
   }
-  msb = Wire.receive();
+  msb = Wire.read();
   while(!Wire.available()) {
     // waiting
   }
-  lsb = Wire.receive();
+  lsb = Wire.read();
   return (((int)msb<<8) | ((int)lsb));
 }
