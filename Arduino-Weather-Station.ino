@@ -69,6 +69,7 @@ LM61 (no longer used):
 
 #include <math.h>
 #include <Wire.h>
+#include <ArduinoJson.h>
 
 // Comment out for a normal build
 // Uncomment for a debug build
@@ -299,7 +300,12 @@ float dewpoint(float T, float h) {
 
 void setup() {
   Serial.begin( BAUD_RATE );   //using the USB serial port for debugging and logging
-  Serial.println( "La Crosse weather station capture begin" );
+  // Serial.println( "La Crosse weather station capture begin" );
+  StaticJsonBuffer<100> jsonBuffer;
+  JsonObject& json = jsonBuffer.createObject();
+  json["message"] = "start";
+  json.printTo(Serial);
+  Serial.println();
   Wire.begin();
   bmp085_get_cal_data();
   // initialize the DS1631 temperature sensor
@@ -347,13 +353,12 @@ void loop() {
     starttime = millis();
     PrintIndoor();		/* get DS1631 temp */
     bmp085_read_temperature_and_pressure(&temperature,&pressure);
-    Serial.print("ELAPSED MS= ");
-    Serial.println(interval,DEC);
-    Serial.print("BMP085 TEMP: ");
-    Serial.println(temperature,DEC);
-    Serial.print("DATA: P= ");
-    Serial.print(pressure,DEC);
-    Serial.println(" Pa");
+    StaticJsonBuffer<100> jsonBuffer;
+    JsonObject& json = jsonBuffer.createObject();
+    json["bmp085_temperature"] = temperature * 0.1;
+    json["pressure"] = pressure;
+    json.printTo(Serial);
+    Serial.println();
   }
 }
 
@@ -362,6 +367,7 @@ void loop() {
 void ParsePacket(byte *Packet) {
 
   byte chksum;
+  StaticJsonBuffer<100> jsonBuffer;
 
   #ifdef DEBUG
   Serial.print("RAW: ");
@@ -380,26 +386,34 @@ void ParsePacket(byte *Packet) {
     /* check for bad digits and make sure that most significant digits repeat */
     if ((Packet[3]==Packet[6]) && (Packet[4]==Packet[7]) && (Packet[3]<10) && (Packet[4]<10) && (Packet[5]<10)) {
       if (Packet[0]==0) {		/* temperature packet */
-	Serial.print("DATA: T= ");
+	// Serial.print("DATA: T= ");
 	tempC=(Packet[3]*10-50 + Packet[4] + ( (float) Packet[5])/10);
 	tempF=tempC*9/5 + 32;
-	Serial.print(tempC,1);	/* print to 0.1 deg precision */
-	Serial.print(" degC, ");
-	Serial.print(tempF,1);	/* print to 0.1 deg precision */
-	Serial.println(" degF");
+	// Serial.print(tempC,1);	/* print to 0.1 deg precision */
+	// Serial.print(" degC, ");
+	// Serial.print(tempF,1);	/* print to 0.1 deg precision */
+	// Serial.println(" degF");
+	JsonObject& json = jsonBuffer.createObject();
+	json["outdoor_temperature"] = tempC;
+	json.printTo(Serial);
+	Serial.println();
 	/* PrintIndoor(); // moved to time interval sampling with pressure */
 	dp=dewpoint(tempC,h);
-	Serial.print("DEWPOINT: ");
-	Serial.print(dp,1);
-	Serial.print(" degC, ");
-	Serial.print(dp*9/5 + 32,1);
-	Serial.println(" degF");
+	// Serial.print("DEWPOINT: ");
+	// Serial.print(dp,1);
+	// Serial.print(" degC, ");
+	// Serial.print(dp*9/5 + 32,1);
+	// Serial.println(" degF");
       } else {
 	if (Packet[0]==0x0E) {		/* humidity packet */
-	  Serial.print("DATA: H= ");
+	  // Serial.print("DATA: H= ");
 	  h=(Packet[3]*10 + Packet[4]);
-	  Serial.print(h,DEC);
-	  Serial.println(" %");
+	  // Serial.print(h,DEC);
+	  // Serial.println(" %");
+	  JsonObject& json = jsonBuffer.createObject();
+	  json["humidity"] = h;
+	  json.printTo(Serial);
+	  Serial.println();
 	} else  {
 	  if (Packet[0]==0x0B) {		/* custom packet */
 	    Serial.print("CUSTOM: T= ");
@@ -430,18 +444,24 @@ void ParsePacket(byte *Packet) {
 // send indoor temperature to serial port
 void PrintIndoor() {
   byte temp[2];
+  StaticJsonBuffer<100> jsonBuffer;
+  JsonObject& json = jsonBuffer.createObject();
   Wire.beginTransmission(DS1631_ADDRESS);
   Wire.write(READTEMP);
   Wire.endTransmission();
   Wire.requestFrom(DS1631_ADDRESS, 2);
-  temp[0] = Wire.receive(); // MSB
-  temp[1] = Wire.receive(); // LSB
+  temp[0] = Wire.read(); // MSB
+  temp[1] = Wire.read(); // LSB
 
-  Serial.print("INDOOR: ");
-  Serial.print(temp[0], DEC);
-  Serial.print(".");
-  Serial.print(temp[1] / 25, DEC); // fractional degree
-  Serial.println(" deg C (DS1631)");
+  tempC = temp[0] + temp[1] / 250.0;
+  json["indoor_temperature"] = tempC;
+  json.printTo(Serial);
+  Serial.println();
+  // Serial.print("INDOOR: ");
+  // Serial.print(temp[0], DEC);
+  // Serial.print(".");
+  // Serial.print(temp[1] / 25, DEC); // fractional degree
+  // Serial.println(" deg C (DS1631)");
 }
 
 void bmp085_read_temperature_and_pressure(int* temperature, long* pressure) {
