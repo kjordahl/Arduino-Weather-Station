@@ -1,11 +1,11 @@
-/* Name: lacrosse.pde
- * Version: 1.1
+/* Name: lacrosse.ino
+ * Version: 1.2
  * Author: Kelsey Jordahl
- * Copyright: Kelsey Jordahl 2010
+ * Copyright: Kelsey Jordahl 2010-2018
    (portions copyright Marc Alexander, Jonathan Oxer 2009;
     Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Mon Jun 27 12:02:27 EDT 2011> 
+ * Time-stamp: <Sat Jun 23 10:17:47 PDT 2018>
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
