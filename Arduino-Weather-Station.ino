@@ -321,7 +321,6 @@ void setup() {
   //PORTD6 and PORTD7, GREEN and RED test LED setup
   DDRD  |=  B11000000;      //(1<<PORTD6);   //DDRD  |=  (1<<PORTD7); (example of B prefix)
   GREEN_TESTLED_OFF();      //GREEN test led off
-//  RED_TESTLED_ON();         //RED test led on
   // Set up timer1 for RF signal detection
   TCCR1A = B00000000;   //Normal mode of operation, TOP = 0xFFFF, TOV1 Flag Set on MAX
   TCCR1B = ( _BV(ICNC1) | _BV(CS11) | _BV(CS10) );
@@ -386,30 +385,17 @@ void ParsePacket(byte *Packet) {
     /* check for bad digits and make sure that most significant digits repeat */
     if ((Packet[3]==Packet[6]) && (Packet[4]==Packet[7]) && (Packet[3]<10) && (Packet[4]<10) && (Packet[5]<10)) {
       if (Packet[0]==0) {		/* temperature packet */
-	// Serial.print("DATA: T= ");
 	tempC=(Packet[3]*10-50 + Packet[4] + ( (float) Packet[5])/10);
 	tempF=tempC*9/5 + 32;
-	// Serial.print(tempC,1);	/* print to 0.1 deg precision */
-	// Serial.print(" degC, ");
-	// Serial.print(tempF,1);	/* print to 0.1 deg precision */
-	// Serial.println(" degF");
 	JsonObject& json = jsonBuffer.createObject();
 	json["outdoor_temperature"] = tempC;
 	json.printTo(Serial);
 	Serial.println();
 	/* PrintIndoor(); // moved to time interval sampling with pressure */
 	dp=dewpoint(tempC,h);
-	// Serial.print("DEWPOINT: ");
-	// Serial.print(dp,1);
-	// Serial.print(" degC, ");
-	// Serial.print(dp*9/5 + 32,1);
-	// Serial.println(" degF");
       } else {
 	if (Packet[0]==0x0E) {		/* humidity packet */
-	  // Serial.print("DATA: H= ");
 	  h=(Packet[3]*10 + Packet[4]);
-	  // Serial.print(h,DEC);
-	  // Serial.println(" %");
 	  JsonObject& json = jsonBuffer.createObject();
 	  json["humidity"] = h;
 	  json.printTo(Serial);
@@ -457,11 +443,6 @@ void PrintIndoor() {
   json["indoor_temperature"] = tempC;
   json.printTo(Serial);
   Serial.println();
-  // Serial.print("INDOOR: ");
-  // Serial.print(temp[0], DEC);
-  // Serial.print(".");
-  // Serial.print(temp[1] / 25, DEC); // fractional degree
-  // Serial.println(" deg C (DS1631)");
 }
 
 void bmp085_read_temperature_and_pressure(int* temperature, long* pressure) {
