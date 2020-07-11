@@ -5,7 +5,7 @@
    (portions copyright Marc Alexander, Jonathan Oxer 2009;
     Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Sat Jun 23 10:17:47 PDT 2018>
+ * Time-stamp: <Sat Jul 11 10:09:59 PDT 2020>
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
@@ -453,7 +453,7 @@ void PrintIndoor() {
   temp[0] = Wire.read(); // MSB
   temp[1] = Wire.read(); // LSB
 
-  tempC = temp[0] + temp[1] / 250.0;
+  tempC = temp[0] + temp[1] / 25.0;
   json["indoor_temperature"] = tempC;
   json.printTo(Serial);
   Serial.println();
