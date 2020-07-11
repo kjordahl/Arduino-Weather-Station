@@ -5,7 +5,7 @@
    (portions copyright Marc Alexander, Jonathan Oxer 2009;
     Interactive Matter 2009 [licensed under GPL with permission])
  * License: GPLv3
- * Time-stamp: <Sat Jul 11 10:36:53 PDT 2020>
+ * Time-stamp: <Sat Jul 11 10:58:22 PDT 2020>
 
 Receive La Crosse TX4 weather sensor data with Arduino and send to
 serial (USB) port.  Also records indoor pressure and temperature from
@@ -91,6 +91,8 @@ LM61 (no longer used):
 // DS1631 command codes
 #define STARTTEMP 0x51
 #define READTEMP 0xAA
+#define PRECISION_11BIT 0x08
+#define PRECISION_12BIT 0x0C
 
 /* serial port communication (via USB) */
 #define BAUD_RATE 9600
@@ -310,6 +312,8 @@ void setup() {
   bmp085_get_cal_data();
   // initialize the DS1631 temperature sensor
   Wire.beginTransmission(DS1631_ADDRESS);
+  Wire.write(0xAC);
+  Wire.write(PRECISION_12BIT);
   Wire.write(STARTTEMP);
   Wire.endTransmission();
 
